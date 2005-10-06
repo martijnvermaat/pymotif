@@ -1,6 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-"""PyMotif
+
+"""
+PyMotif
 
 This is a test program.
 
@@ -8,11 +10,11 @@ Description here.
 
 Laurens Bronwasser, lmbronwa@cs.vu.nl
 Martijn Vermaat mvermaat@cs.vu.nl
-
 """
 
-__version__ = "0.1"
-__date__ = "2005/10/05"
+
+VERSION = "0.1"
+DATE = "2005/10/05"
 
 
 import sys
@@ -23,7 +25,7 @@ from Bio import Fasta
 def main():
 
     parser = OptionParser(usage = "usage: %prog -i FILE [options]",
-                          version = "PyMotif %s (%s)" % (__version__, __date__),
+                          version = "PyMotif %s (%s)" % (VERSION, DATE),
                           description = "PyMotif reads an input file in Fasta"
                           " format and prints the gene names.")
 
