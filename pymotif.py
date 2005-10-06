@@ -80,6 +80,14 @@ def calculate_position(M, s):
 
     # todo: look at page 7 of lect4.pdf, slide 2
 
+    # i don't completely understand this slide
+    # * what do the Qr and Pr say?
+    # * in the computation of Pr, where do the p's come from?
+    #   (later: i think little p is the same as our M)
+    # * i guess for every K letter word in s, the r index is the position
+    #   of this word in s?
+    # * by K she actually means W
+
     return p
 
 
