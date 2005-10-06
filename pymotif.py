@@ -39,7 +39,7 @@ while True:
 
 # print motif occurence in each sequence
 for s in S:
-    print s[ b[s]:(W-b[s] ]
+    print s[ b[s]:(W-b[s]) ]
 
 # M can be used to highlight matching bases (as done by AlignAce)
 
