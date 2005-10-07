@@ -117,7 +117,7 @@ def main():
     parser.add_option("-s", "--samples", dest="samples", action="store_true",
                       default=False, help="print first ten bases of each gene")
     parser.add_option("-w", "--width", dest="width", metavar="WIDTH",
-                      help="find motif of width WIDTH")
+                      type="int", help="find motif of width WIDTH")
 
     (options, args) = parser.parse_args()
 
