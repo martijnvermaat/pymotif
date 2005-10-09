@@ -22,7 +22,7 @@ M = 4xW matrix of frequencies of bases in motif
 
 # initial (random) values for b
 for s in S:
-    b[s] = random(0, length(s))
+    b[s] = random(0, length(s) - W)
 
 # until convergence calculate new M and b
 while True:
@@ -128,7 +128,8 @@ def main():
     for base in "ATCG":
         print base,
         for weight in motif[base]:
-            print weight,
+            #print "%1.2f" % weight,   # we have floats
+            print "%3i" % weight,      # we have ints
         print
 
 
@@ -151,31 +152,29 @@ def calculate_motif(sequences, motif_width):
     This implementation is very naive, use pseudocounts.
     """
 
-    # This is ugly, but just to populate the matrix
-    # All values will be reset to 0 in algorithm
-    motif = {'A': range(0, motif_width),
-             'T': range(0, motif_width),
-             'C': range(0, motif_width),
-             'G': range(0, motif_width)}
+    # Populate the matrix with 0 for all positions
+    motif = {'A': [0 for _ in range(motif_width)],
+             'T': [0 for _ in range(motif_width)],
+             'C': [0 for _ in range(motif_width)],
+             'G': [0 for _ in range(motif_width)]}
 
     # For all bases and all positions of motif
     for i in "ATCG":
-        for j in range(0, motif_width):
-
-            # Initialize value to 0
-            motif[i][j] = 0
+        for j in range(motif_width):
 
             # For each sequence, add 1 if it has base i at position j
             for s in sequences:
-                position = s['motif_position'] + j - 1
+                position = s['motif_position'] + j
                 if s['sequence'][position] == i:
                     motif[i][j] += 1
 
             # Divide by the number of sequences and we have the weight of base
             # i at position j
 
-            # Hmm, this seems to truncate to 0, how do we use real numbers?
-            #motif[i][j] /= len(sequences)
+            # I think we shouldn't do this devision
+            # Perhaps only on output of the matrix to the screen
+            # (Have to check if this is ok for rest of algorithm)
+            #motif[i][j] /= float(len(sequences))
 
     return motif
 
