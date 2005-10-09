@@ -30,7 +30,7 @@ while True:
     cur_s = random s in S
 
     M = calculate_m(W, S - cur_s, b)
-    b[cur_s] = calculate_position(M, cur_s)
+    b[cur_s] = calculate_position(W, M, cur_s)
 
     # how to detect convergence?
     if converged: break
@@ -71,12 +71,14 @@ def calculate_m(W, S, b):
 
     return M
 
-def calculate_position(M, s):
+def calculate_position(W, M, s):
 
     # M = 4xW matrix of frequencies of bases in motif
     # W = width of motif
     # s = sequence to find motif in
-    # p = position of motif in s
+    # r = current position of motif in s to consider
+    # p = ultimate position of motif in s
+    # C = list of probabilities for each position of motif in s
 
     # todo: look at page 7 of lect4.pdf, slide 2
 
@@ -84,9 +86,34 @@ def calculate_position(M, s):
     # * what do the Qr and Pr say?
     # * in the computation of Pr, where do the p's come from?
     #   (later: i think little p is the same as our M)
+    #   (later: i don't think so, p's have something to do with background)
     # * i guess for every K letter word in s, the r index is the position
     #   of this word in s?
     # * by K she actually means W
+
+    # ok, according to my mail at 00:45, 10 oct I suggest the following
+    # implementation (comments are left out, consult the mail)
+
+    # for every word of length W in s
+    for r in range(len(s) - W):
+
+        Qr = Pr = 1
+
+        # for every position of the motif
+        for x in range(W):
+
+            # multiply by position weight of current base in s as defined in
+            # the matrix
+            Qr *= M[ s[r+x] ][x]
+
+            # multiply by background value of current base in s
+            Pr * = background_value[ s[r+x] ]
+
+        # corrected Qr value
+        C[r] = Qr / Pr
+
+    # position with highest C[r] value wins
+    p = r for maximum C[r]
 
     return p
 
@@ -97,7 +124,7 @@ Martijn Vermaat mvermaat@cs.vu.nl
 
 
 VERSION = "0.1"
-DATE = "2005/10/08"
+DATE = "2005/10/10"
 
 
 import sys
