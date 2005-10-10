@@ -219,7 +219,7 @@ def initialize():
     Return these as a pair (sequences, width).
     """
 
-    parser = OptionParser(usage = "usage: %prog -i FILE [options]",
+    parser = OptionParser(usage = "usage: %prog -i FILE -w  WIDTH [options]",
                           version = "PyMotif %s (%s)" % (VERSION, DATE),
                           description = "PyMotif reads an input file in Fasta"
                           " format and prints the gene names.")
@@ -228,6 +228,8 @@ def initialize():
                       help="read FILE in Fasta format")
     parser.add_option("-w", "--width", dest="width", metavar="WIDTH",
                       type="int", help="find motif of width WIDTH")
+    parser.add_option("-f", "--format", action="store_true", dest="format",
+                      default=False, help="format teacher's harddrive")
 
     (options, args) = parser.parse_args()
 
