@@ -130,6 +130,7 @@ Random notes:
 * Look at gibbs sampling on page 412 of bioinformatics algorithms
 
 Pointers:
+http://ibivu.cs.vu.nl/teaching/a4g/materials/lect4.pdf
 http://ai.stanford.edu/~serafim/CS262_2005/LectureNotes/Lecture15.pdf
 http://www.snubi.org/~jhohn2/20020611.ppt
 
