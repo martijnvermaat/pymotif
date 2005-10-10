@@ -90,6 +90,7 @@ def calculate_position(W, M, s):
     # * i guess for every K letter word in s, the r index is the position
     #   of this word in s?
     # * by K she actually means W
+    # * great chance with K she means W :)
 
     # ok, according to my mail at 00:45, 10 oct I suggest the following
     # implementation (comments are left out, consult the mail)
