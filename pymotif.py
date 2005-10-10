@@ -122,6 +122,8 @@ def calculate_position(W, M, s):
 Random notes:
 * Would it make sense to check for multiple occurences of the motif in one
   sequence?
+* Look at pseudocounts
+* Look at gibbs sampling on page 412 of bioinformatics algorithms
 
 
 Laurens Bronwasser, lmbronwa@cs.vu.nl
