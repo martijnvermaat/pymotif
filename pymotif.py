@@ -119,6 +119,11 @@ def calculate_position(W, M, s):
     return p
 
 
+Random notes:
+* Would it make sense to check for multiple occurences of the motif in one
+  sequence?
+
+
 Laurens Bronwasser, lmbronwa@cs.vu.nl
 Martijn Vermaat mvermaat@cs.vu.nl
 """
