@@ -117,7 +117,7 @@ def calculate_position(W, M, s):
         # devide by zero?
         C[r] = Qr / Pr
 
-    # position with highest C[r] value wins
+    # pick random position according to distribution of C[r] values
     p = r for maximum C[r]
 
     return p
