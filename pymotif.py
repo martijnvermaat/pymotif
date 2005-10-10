@@ -28,6 +28,9 @@ for s in S:
 while True:
 
     cur_s = random s in S
+    # alt: cur_s = round robin s in S
+    # we could do a performance check on this alternative
+    # not important at the moment
 
     M = calculate_m(W, S - cur_s, b)
     b[cur_s] = calculate_position(W, M, cur_s)
@@ -108,9 +111,10 @@ def calculate_position(W, M, s):
             Qr *= M[ s[r+x] ][x]
 
             # multiply by background value of current base in s
-            Pr * = background_value[ s[r+x] ]
+            Pr *= background_value[ s[r+x] ]
 
         # corrected Qr value
+        # devide by zero?
         C[r] = Qr / Pr
 
     # position with highest C[r] value wins
