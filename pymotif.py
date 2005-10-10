@@ -129,6 +129,10 @@ Random notes:
 * Look at pseudocounts
 * Look at gibbs sampling on page 412 of bioinformatics algorithms
 
+Pointers:
+http://ai.stanford.edu/~serafim/CS262_2005/LectureNotes/Lecture15.pdf
+http://www.snubi.org/~jhohn2/20020611.ppt
+
 
 Laurens Bronwasser, lmbronwa@cs.vu.nl
 Martijn Vermaat mvermaat@cs.vu.nl
