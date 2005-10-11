@@ -128,6 +128,7 @@ Random notes:
   sequence?
 * Look at pseudocounts
 * Look at gibbs sampling on page 412 of bioinformatics algorithms
+* Make a score(motif) function
 
 Pointers:
 http://ibivu.cs.vu.nl/teaching/a4g/materials/lect3-handout.pdf
@@ -138,17 +139,18 @@ http://genomics10.bu.edu/ulask/mcmc/mcmc_cs591.pdf
 http://melina.hgc.jp/expl_par.html
 
 
-Laurens Bronwasser, lmbronwa@cs.vu.nl
 Martijn Vermaat mvermaat@cs.vu.nl
 """
 
 
 VERSION = "0.1"
-DATE = "2005/10/10"
+DATE = "2005/10/12"
+
+PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
 
 
 import sys
-from random import randint
+from random import randint, choice
 from optparse import OptionParser
 from Bio import Fasta
 
@@ -161,24 +163,52 @@ def main():
     Real algorithm should be in a separate gibbs() function.
     """
 
-    sequences, motif_width = initialize()
+    sequences, motif_width, pseudocounts_weight = initialize()
+
+    pseudocounts = calculate_pseudocounts(sequences, pseudocounts_weight)
 
     random_motif_positions(sequences, motif_width)
 
-    motif = calculate_motif(sequences, motif_width)
+    print "Initialization:"
 
-    # Print start of each sequence and current motif position
-    for s in sequences:
-        print "%s... motif at position %s" % (s['sequence'][:40], s['motif_position'])
+    motif = calculate_motif(sequences, motif_width, pseudocounts)
 
-    # Print position weight matrix for motif
-    for base in "ATCG":
-        print base,
-        for weight in motif[base]:
-            #print "%1.2f" % weight,   # we have floats
-            print "%3i" % weight,      # we have ints
-        print
+    print_motif(motif)
 
+    print_sequences(sequences, motif_width)
+
+    for i in range(200):
+
+        print "Step %i:" % i
+
+        # Pick a random sequence
+        current_sequence = choice(sequences)
+        sequences_minus_current = filter(lambda s: s != current_sequence, sequences)
+
+        print "Choose sequence with position:", current_sequence['motif_position']
+
+        motif = calculate_motif(sequences_minus_current, motif_width, pseudocounts)
+
+        print_motif(motif)
+
+        calculate_position(motif, motif_width, current_sequence)
+
+        print_sequences(sequences, motif_width)
+
+
+def calculate_pseudocounts(sequences, weight):
+
+    """
+    Return for each base a weighted pseudocount.
+    """
+
+    # TODO: use the background frequency for this
+    counts = {'A': weight * 0.25,
+              'T': weight * 0.25,
+              'C': weight * 0.25,
+              'G': weight * 0.25}
+
+    return counts
 
 def random_motif_positions(sequences, motif_width):
 
@@ -191,19 +221,19 @@ def random_motif_positions(sequences, motif_width):
         s['motif_position'] = randint(0, len(s['sequence']) - motif_width)
 
 
-def calculate_motif(sequences, motif_width):
+def calculate_motif(sequences, motif_width, pseudocounts):
 
     """
     Calculate the position weight matrix for the motif.
-
-    This implementation is very naive, use pseudocounts.
     """
 
-    # Populate the matrix with 0 for all positions
-    motif = {'A': [0 for _ in range(motif_width)],
-             'T': [0 for _ in range(motif_width)],
-             'C': [0 for _ in range(motif_width)],
-             'G': [0 for _ in range(motif_width)]}
+    # TODO: this implementation is very naive
+
+    # Populate the matrix with pseudocounts for all positions
+    motif = {'A': [pseudocounts['A']] * motif_width,
+             'T': [pseudocounts['T']] * motif_width,
+             'C': [pseudocounts['C']] * motif_width,
+             'G': [pseudocounts['G']] * motif_width}
 
     # For all bases and all positions of motif
     for i in "ATCG":
@@ -226,6 +256,46 @@ def calculate_motif(sequences, motif_width):
     return motif
 
 
+def calculate_position(motif, motif_width, sequence):
+
+    """
+    Calculate new position of motif in sequence.
+    """
+
+    # TODO: pick random based on probabilities instead of the highest
+    highest_probability = 0
+    position = 0
+
+    # for every word of length W in s
+    for r in range(len(sequence['sequence']) - motif_width + 1):
+
+        Qr = Pr = 1
+
+        # for every position of the motif
+        for x in range(motif_width):
+
+            # multiply by position weight of current base in sequence as
+            # defined in the motif matrix
+            Qr *= motif[ sequence['sequence'][r+x] ][x]
+
+            # multiply by background value of current base in sequence
+            Pr *= 0.25 # TODO: use background_value[ s[r+x] ]
+
+        # corrected Qr value
+        # devide by zero?
+        #sample_probabilities.append(Qr / Pr)
+        probability = Qr / Pr
+        if probability > highest_probability:
+            highest_probability = probability
+            position = r
+
+    sequence['motif_position'] = position
+
+    print "New position:", position
+
+    return position
+
+
 def initialize():
 
     """
@@ -235,11 +305,13 @@ def initialize():
       sequences: a list of dictionary objects having 'title', 'sequence', and
                  'motif_position' attributes.
       width: width of motif to find
+      weight: weight of pseudocounts
 
-    Return these as a pair (sequences, width).
+    Return these as a tuple (sequences, width, weight).
     """
 
-    parser = OptionParser(usage = "usage: %prog -i FILE -w  WIDTH [options]",
+    # TODO: change description
+    parser = OptionParser(usage = "usage: %prog -i FILE -w WIDTH [options]",
                           version = "PyMotif %s (%s)" % (VERSION, DATE),
                           description = "PyMotif reads an input file in Fasta"
                           " format and prints the gene names.")
@@ -248,8 +320,12 @@ def initialize():
                       help="read FILE in Fasta format")
     parser.add_option("-w", "--width", dest="width", metavar="WIDTH",
                       type="int", help="find motif of width WIDTH")
+    parser.add_option("-p", "--pseudo", dest="pseudo", metavar="WEIGHT",
+                      default=PSEUDOCOUNTS_DEFAULT_WEIGHT, type="float",
+                      help="use WEIGHT for weight of pseudocounts (defaults to " +
+                      str(PSEUDOCOUNTS_DEFAULT_WEIGHT) + ")")
     parser.add_option("-f", "--format", action="store_true", dest="format",
-                      default=False, help="format teacher's harddrive")
+                      default=False, help="format teacher's harddrive (not recommended)")
 
     (options, args) = parser.parse_args()
 
@@ -276,7 +352,23 @@ def initialize():
                   'motif_position': 0}
                  for record in fasta_iterator]
 
-    return sequences, options.width
+    return sequences, options.width, options.pseudo
+
+
+def print_motif(motif):
+    # Print position weight matrix for motif
+    for base in "ATCG":
+        print base,
+        for weight in motif[base]:
+            print "%1.2f" % weight,   # we have floats
+        print
+
+
+def print_sequences(sequences, motif_width):
+    # Print motif occurence in each sequence and motif position
+    for s in sequences:
+        start, end = s['motif_position'], s['motif_position'] + motif_width
+        print "%s... motif at position %s" % (s['sequence'][start:end], s['motif_position'])
 
 
 if __name__ == "__main__":
