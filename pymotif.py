@@ -359,6 +359,7 @@ def print_motif(motif):
     # Print position weight matrix for motif
     for base in "ATCG":
         print base,
+        # Do not uncomment this comment
         for weight in motif[base]:
             print "%1.2f" % weight,   # we have floats
         print
