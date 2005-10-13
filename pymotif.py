@@ -150,7 +150,9 @@ PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
 
 
 import sys
-from random import randint, choice
+from rpy import r   # TODO: remove this import or make it optional
+from random import random, randint, choice
+from math import log
 from optparse import OptionParser
 from Bio import Fasta
 
@@ -177,6 +179,8 @@ def main():
 
     print_sequences(sequences, motif_width)
 
+    entropies = []
+
     for i in range(200):
 
         print "Step %i:" % i
@@ -191,9 +195,13 @@ def main():
 
         print_motif(motif)
 
+        entropies.append(calculate_entropy(motif, motif_width, pseudocounts))
+
         calculate_position(motif, motif_width, current_sequence)
 
         print_sequences(sequences, motif_width)
+
+        #print_entropies(entropies)
 
 
 def calculate_pseudocounts(sequences, weight):
@@ -235,6 +243,11 @@ def calculate_motif(sequences, motif_width, pseudocounts):
              'C': [pseudocounts['C']] * motif_width,
              'G': [pseudocounts['G']] * motif_width}
 
+    # TODO: do we really need this total? calculate it in a nicer way then
+    pseudocounts_total = 0
+    for k in pseudocounts:
+        pseudocounts_total += pseudocounts[k]
+
     # For all bases and all positions of motif
     for i in "ATCG":
         for j in range(motif_width):
@@ -251,7 +264,7 @@ def calculate_motif(sequences, motif_width, pseudocounts):
             # I think we shouldn't do this devision
             # Perhaps only on output of the matrix to the screen
             # (Have to check if this is ok for rest of algorithm)
-            #motif[i][j] /= float(len(sequences))
+            motif[i][j] /= float(len(sequences)) + pseudocounts_total
 
     return motif
 
@@ -262,9 +275,15 @@ def calculate_position(motif, motif_width, sequence):
     Calculate new position of motif in sequence.
     """
 
-    # TODO: pick random based on probabilities instead of the highest
-    highest_probability = 0
-    position = 0
+    # TODO: refactor this function
+
+    probabilities = []
+    probability_total = 0
+
+    probability_sum = 0
+    probability_counts = []
+
+    smallest = 1
 
     # for every word of length W in s
     for r in range(len(sequence['sequence']) - motif_width + 1):
@@ -283,17 +302,77 @@ def calculate_position(motif, motif_width, sequence):
 
         # corrected Qr value
         # devide by zero?
-        #sample_probabilities.append(Qr / Pr)
-        probability = Qr / Pr
-        if probability > highest_probability:
-            highest_probability = probability
-            position = r
+        p = Qr / Pr
+        probabilities.append(p)
+        probability_total += p
+
+    for probability in probabilities:
+        Cr = probability / probability_total
+        probability_counts.append(probability_sum + Cr)
+        probability_sum += Cr
+        if Cr < smallest:
+            smallest = Cr
+
+        # TODO: slides say Cr should be divided by sum_r(Qr/Pr), I don't think
+        # we should do that
+        # Update: we do so now
+
+        #probability_counts.append(probability_sum + Cr)
+        #probability_sum += Cr
+
+    # We summed up all probabilities and generate a random integer between
+    # one and this sum. Now we traverse through the list of probabilities
+    # to see what probability this integer falls into.
+    # TODO: Yes, we take a random integer. Is this a bug or not?
+
+    choice = random()
+
+    position = -1
+    for p in range(len(probability_counts)):
+        if probability_counts[p] >= choice:
+            position = p
+            break
+
+    # TODO: remove this
+    if position < 0:
+        print "This should never happen"
+        sys.exit()
 
     sequence['motif_position'] = position
 
-    print "New position:", position
+    #print "New position:", position
+
+    #if (probability_counts[position] - probability_counts[position-1] < 0.5):
+    #print "Choice was:", choice
+    #print "Probability was:", probability_counts[position] - probability_counts[position-1]
+    #print "Out of avarage:", (probability_sum / (len(sequence['sequence']) - motif_width))
+    #print "And total:", probability_sum
+    #print "Sequence length:", len(sequence['sequence'])
+    #print probability_counts
 
     return position
+
+
+def calculate_entropy(motif, motif_width, pseudocounts):
+
+    """
+    We calculate the relative entropy of the given motif position weight
+    matrix, using the background pseudocounts.
+    """
+
+    entropy = 0
+
+    for base in "ATCG":
+
+        for i in range(motif_width):
+
+            entropy -= motif[base][i] * log(motif[base][i], 2)
+
+            # I think there'se no need to use the background pseudocounts here,
+            # because we already used them in the motif matrix.
+            #entropy += motif[base][i] * log(motif[base][i] / pseudocounts[base], 2)
+
+    return entropy
 
 
 def initialize():
@@ -370,6 +449,13 @@ def print_sequences(sequences, motif_width):
     for s in sequences:
         start, end = s['motif_position'], s['motif_position'] + motif_width
         print "%s... motif at position %s" % (s['sequence'][start:end], s['motif_position'])
+
+
+def print_entropies(entropies):
+
+    r.xfig("entropies.fig")
+    r.plot(entropies, type='b', xlab="Iterations", ylab="Entropy")
+    r.dev_off()
 
 
 if __name__ == "__main__":
