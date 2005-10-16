@@ -169,13 +169,9 @@ def main():
 
     g = Gibbs(sequences, motif_width, pseudocounts_weight)
 
-    m = g.find_motif(250)
+    g.find_motif(runs=5, iterations=80, phase_shifts=4)
 
-    for k in m.keys():
-        print k,
-        for weight in m[k]:
-            print "%1.2f" % weight,
-        print
+    print_sequences(sequences, motif_width)
 
 
 def initialize():

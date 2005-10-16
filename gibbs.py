@@ -22,9 +22,9 @@ class Gibbs:
     """
 
 
-    sequences = []
-    motif_width = 0
-    pseudocounts = {}
+    __sequences = []
+    __motif_width = 0
+    __pseudocounts = {}
 
 
     def __init__(self, sequences, motif_width, pseudocounts_weight):
@@ -40,48 +40,101 @@ class Gibbs:
             motif_position  integer position of the motif in sequence
         """
 
-        self.sequences = sequences
-        self.motif_width = motif_width
+        self.__sequences = sequences
+        self.__motif_width = motif_width
 
-        self.calculate_pseudocounts(pseudocounts_weight)
+        self.__calculate_pseudocounts(pseudocounts_weight)
 
         return
 
 
-    def find_motif(self, iterations=100):
+    def find_motif(self, runs=1, iterations=50, phase_shifts=0):
 
         """
-        Find a motif in sequences applying Gibbs sampling with the given
-        number of iterations.
+        Finds a motif in sequences using Gibbs sampling.
+
+        Parameters:
+
+            runs          times to run algorithm
+            iterations    non-improving iterations before quiting
+            phase_shifts  number of phase shifts to examine
+
+        Stores the best alignment found.
         """
 
-        self.random_motif_positions()
+        overall_best_entropy = 9999
+        overall_best_alignment = []
 
-        for i in range(iterations):
+        for r in range(runs):
 
-            # Pick a random sequence
-            current_sequence = random.choice(self.sequences)
-            sequences_minus_current = filter(lambda s: s != current_sequence, self.sequences)
+            # TODO: maybe we could make some heuristics up for the next
+            # initialization instead of random positions every run
+            self.__random_motif_positions()
 
-            motif = self.calculate_motif(sequences_minus_current)
+            best_entropy = 9999
+            best_alignment = []
 
-            #print_motif(motif)
+            i = 0
 
-            #entropies.append(g.calculate_entropy(motif, motif_width, pseudocounts))
+            while i < iterations:
 
-            self.calculate_position(motif, current_sequence)
+                i += 1
 
-            # Do a phase shift every 15 iterations (TODO: provide command line option)
-            if i > 0 and i % 15 == 0:
-                # TODO: provide command line option for max shift (default 0)
-                shift = self.phase_shift(2)
-                if shift != 0:
-                    print i, shift
+                # Pick a random sequence
+                current_sequence = random.choice(self.__sequences)
+                sequences_minus_current = filter(
+                    lambda s: s != current_sequence,
+                    self.__sequences)
 
-        return self.calculate_motif(self.sequences)
+                motif = self.__calculate_motif(sequences_minus_current)
+
+                #print_motif(motif)
+
+                #entropies.append(g.calculate_entropy(motif,
+                #                                     motif_width,
+                #                                     pseudocounts))
+
+                self.__calculate_position(motif, current_sequence)
+
+                # Do a phase shift every 15 iterations
+                # TODO: provide command line option
+                if i > 0 and i % 15 == 0:
+                    shift = self.__phase_shift(phase_shifts)
+                    #if shift != 0:
+                        #print "Shift:", i, shift
+
+                entropy = self.__calculate_entropy(motif)
+                if entropy < best_entropy:
+                    best_entropy = entropy
+                    best_alignment = [s['motif_position']
+                                      for s in self.__sequences]
+                    i = 0
+
+            # Restore to best entropy
+            for i in range(len(self.__sequences)):
+                self.__sequences[i]['motif_position'] = best_alignment[i]
+
+            motif = self.__calculate_motif(self.__sequences)
+            entropy = self.__calculate_entropy(motif)
+
+            #print entropy
+
+            if entropy < overall_best_entropy:
+                overall_best_entropy = entropy
+                overall_best_alignment = [s['motif_position']
+                                          for s in self.__sequences]
+
+        # Restore to best entropy
+        for i in range(len(self.__sequences)):
+            self.__sequences[i]['motif_position'] = overall_best_alignment[i]
+
+        motif = self.__calculate_motif(self.__sequences)
+        print self.__calculate_entropy(motif)
+
+        return
 
 
-    def phase_shift(self, shift):
+    def __phase_shift(self, shift):
 
         """
         Calculate motif for some small phase shifts in each sequence and apply
@@ -90,10 +143,11 @@ class Gibbs:
 
         # Check if we can really do these shifts
         # TODO: make a difference between shift_left and shift_right
-        for s in self.sequences:
+        for s in self.__sequences:
             if s['motif_position'] < shift:
                 shift = s['motif_position']
-            right = len(s['sequence']) - (s['motif_position'] + self.motif_width)
+            right = len(s['sequence']) - (s['motif_position']
+                                          + self.__motif_width)
             if  right < shift:
                 shift = right
 
@@ -101,11 +155,11 @@ class Gibbs:
             return 0
 
         # Calculate entropy for no shift
-        motif = self.calculate_motif(self.sequences)
-        old_entropy = self.calculate_entropy(motif)
+        motif = self.__calculate_motif(self.__sequences)
+        old_entropy = self.__calculate_entropy(motif)
 
         # Start at position -shift
-        for s in self.sequences:
+        for s in self.__sequences:
             s['motif_position'] -= shift
 
         # Keep best shift information
@@ -118,26 +172,26 @@ class Gibbs:
             # We already calculated the no shift case
             if i != 2:
 
-                motif = self.calculate_motif(self.sequences)
-                entropy = self.calculate_entropy(motif)
+                motif = self.__calculate_motif(self.__sequences)
+                entropy = self.__calculate_entropy(motif)
 
                 if entropy < best_entropy:
                     best_shift = i - 2
                     best_entropy = entropy
 
             # Shift sequences
-            for s in self.sequences:
+            for s in self.__sequences:
                 s['motif_position'] += 1
 
         # Restore to best shift
         # TODO: pick random shift based on distribution
-        for s in self.sequences:
+        for s in self.__sequences:
             s['motif_position'] -= (shift - best_shift + 1)
 
         return best_shift
 
 
-    def calculate_pseudocounts(self, weight):
+    def __calculate_pseudocounts(self, weight):
 
         """
         Calculate for each base a weighted pseudocount.
@@ -145,26 +199,26 @@ class Gibbs:
 
         # TODO: use the background frequency for this
         for base in "ATCG":
-            self.pseudocounts[base] = weight * 0.25
+            self.__pseudocounts[base] = weight * 0.25
 
         return
 
 
-    def random_motif_positions(self):
+    def __random_motif_positions(self):
 
         """
         Populate the list of sequences with a random position of the motif for
         each sequence.
         """
 
-        for s in self.sequences:
+        for s in self.__sequences:
             s['motif_position'] = random.randint(
-                0, len(s['sequence']) - self.motif_width)
+                0, len(s['sequence']) - self.__motif_width)
 
         return
 
 
-    def calculate_motif(self, sequences):
+    def __calculate_motif(self, sequences):
 
         """
         Calculate the position weight matrix of the motif for the given
@@ -177,13 +231,13 @@ class Gibbs:
         # Populate the matrix with pseudocounts for all positions
         motif = {}
         for base in "ATCG":
-            motif[base] = [self.pseudocounts[base]] * self.motif_width
+            motif[base] = [self.__pseudocounts[base]] * self.__motif_width
 
-        pseudocounts_total = sum(self.pseudocounts.values())
+        pseudocounts_total = sum(self.__pseudocounts.values())
 
         # For all bases and all positions of motif
         for i in "ATCG":
-            for j in range(self.motif_width):
+            for j in range(self.__motif_width):
 
                 # For each sequence, add 1 if it has base i at position j
                 for s in sequences:
@@ -198,7 +252,7 @@ class Gibbs:
         return motif
 
 
-    def calculate_position(self, motif, sequence):
+    def __calculate_position(self, motif, sequence):
 
         """
         Calculate new position of motif in sequence based on motif matrix.
@@ -208,14 +262,14 @@ class Gibbs:
         probabilities = []
 
         # For every word of length motif_width in sequence
-        for r in range(len(sequence['sequence']) - self.motif_width + 1):
+        for r in range(len(sequence['sequence']) - self.__motif_width + 1):
 
             # p_motif: probability that word is generated from motif
             # p_background: probability that word is generated from background
             p_motif = p_background = 1
 
             # For every position of the motif
-            for x in range(self.motif_width):
+            for x in range(self.__motif_width):
 
                 # Multiply by position weight of current base in sequence as
                 # defined in the motif matrix
@@ -229,12 +283,12 @@ class Gibbs:
             probabilities.append(p_motif / p_background)
 
         # Choose a random position based on probability distribution
-        sequence['motif_position'] = self.choose_random(probabilities)
+        sequence['motif_position'] = self.__choose_random(probabilities)
 
         return
 
 
-    def calculate_entropy(self, motif):
+    def __calculate_entropy(self, motif):
 
         """
         Calculate the relative entropy of the given motif matrix.
@@ -243,18 +297,18 @@ class Gibbs:
         entropy = 0
 
         for base in "ATCG":
-            for i in range(self.motif_width):
+            for i in range(self.__motif_width):
                 entropy -= motif[base][i] * math.log(motif[base][i], 2)
 
                 # I think there'se no need to use the background pseudocounts
                 # here, because we already used them in the motif matrix.
-                # entropy += motif[base][i] * log(motif[base][i] /
-                #                                 self.pseudocounts[base], 2)
+                #entropy += motif[base][i] * log(motif[base][i] /
+                #                                self.__pseudocounts[base], 2)
 
         return entropy
 
 
-    def choose_random(self, distribution):
+    def __choose_random(self, distribution):
 
         """
         Choose a random integer N with 0 <= N < len(distribution) according to
