@@ -129,6 +129,9 @@ Random notes:
 * Look at pseudocounts
 * Look at gibbs sampling on page 412 of bioinformatics algorithms
 * Make a score(motif) function
+* The real challenge is not to find a 'good' motif, but to find the best motif
+  and to optimize it (convergence algorithm, phase shifting, etc)
+* Run the algorithm more than once and show the best result
 
 Pointers:
 http://ibivu.cs.vu.nl/teaching/a4g/materials/lect3-handout.pdf
@@ -150,7 +153,6 @@ PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
 
 
 import sys
-from rpy import r   # TODO: remove this import or make it optional
 from random import random, randint, choice
 from math import log
 from optparse import OptionParser
@@ -161,9 +163,9 @@ def main():
 
     """
     Main program.
-
-    Real algorithm should be in a separate gibbs() function.
     """
+
+    # TODO: put all Gibbs stuff in a gibbs module
 
     sequences, motif_width, pseudocounts_weight = initialize()
 
@@ -171,37 +173,94 @@ def main():
 
     random_motif_positions(sequences, motif_width)
 
-    print "Initialization:"
-
-    motif = calculate_motif(sequences, motif_width, pseudocounts)
-
-    print_motif(motif)
-
-    print_sequences(sequences, motif_width)
-
     entropies = []
+    scores = []
 
-    for i in range(200):
+    for i in range(1, 120):
 
-        print "Step %i:" % i
+        #print "Step %i:" % i
 
         # Pick a random sequence
         current_sequence = choice(sequences)
         sequences_minus_current = filter(lambda s: s != current_sequence, sequences)
 
-        print "Choose sequence with position:", current_sequence['motif_position']
+        #print "Choose sequence with position:", current_sequence['motif_position']
 
         motif = calculate_motif(sequences_minus_current, motif_width, pseudocounts)
 
-        print_motif(motif)
+        #print_motif(motif)
 
         entropies.append(calculate_entropy(motif, motif_width, pseudocounts))
+        scores.append(calculate_score(motif, motif_width))
 
         calculate_position(motif, motif_width, current_sequence)
 
-        print_sequences(sequences, motif_width)
+        #print_sequences(sequences, motif_width)
 
-        #print_entropies(entropies)
+        # Do a phase shift every 15 iterations (TODO: provide command line option)
+        if i % 15 == 0:
+            # TODO: provide command line option for max shift (default 0)
+            shift = phase_shift(sequences, motif_width, pseudocounts, 2)
+            if shift != 0:
+                print i, shift
+
+    #print_entropies(entropies)
+    #print_scores(scores)
+
+
+def phase_shift(sequences, motif_width, pseudocounts, shift):
+
+    """
+    Calculate motif for some small phase shifts in each sequence and apply
+    the fase shift with best entropy.
+    """
+
+    # Check if we can really do these shifts
+    # TODO: make a difference between shift_left and shift_right
+    for s in sequences:
+        if s['motif_position'] < shift:
+            shift = s['motif_position']
+        if len(s['sequence']) - (s['motif_position'] + motif_width) < shift:
+            shift = len(s['sequence']) - (s['motif_position'] + motif_width)
+
+    if shift < 1:
+        return 0
+
+    # Calculate entropy for no shift
+    motif = calculate_motif(sequences, motif_width, pseudocounts)
+    old_entropy = calculate_entropy(motif, motif_width, pseudocounts)
+
+    # Start at position -shift
+    for s in sequences:
+        s['motif_position'] -= shift
+
+    # Keep best shift information
+    best_shift = 0
+    best_entropy = old_entropy
+
+    # For all shifts in range (-shift, shift)
+    for i in range(shift * 2 + 1):
+
+        # We already calculated the no shift case
+        if i != 2:
+
+            motif = calculate_motif(sequences, motif_width, pseudocounts)
+            entropy = calculate_entropy(motif, motif_width, pseudocounts)
+
+            if entropy < best_entropy:
+                best_shift = i - 2
+                best_entropy = entropy
+
+        # Shift sequences
+        for s in sequences:
+            s['motif_position'] += 1
+
+    # Restore to best shift
+    # TODO: pick random shift based on distribution
+    for s in sequences:
+        s['motif_position'] -= (shift - best_shift + 1)
+
+    return best_shift
 
 
 def calculate_pseudocounts(sequences, weight):
@@ -211,12 +270,12 @@ def calculate_pseudocounts(sequences, weight):
     """
 
     # TODO: use the background frequency for this
-    counts = {'A': weight * 0.25,
-              'T': weight * 0.25,
-              'C': weight * 0.25,
-              'G': weight * 0.25}
+    counts = {}
+    for base in "ATCG":
+        counts[base] = weight * 0.25
 
     return counts
+
 
 def random_motif_positions(sequences, motif_width):
 
@@ -232,21 +291,16 @@ def random_motif_positions(sequences, motif_width):
 def calculate_motif(sequences, motif_width, pseudocounts):
 
     """
-    Calculate the position weight matrix for the motif.
+    Calculate the position weight matrix for the motif for the given
+    sequences and their alignments.
     """
 
-    # TODO: this implementation is very naive
-
     # Populate the matrix with pseudocounts for all positions
-    motif = {'A': [pseudocounts['A']] * motif_width,
-             'T': [pseudocounts['T']] * motif_width,
-             'C': [pseudocounts['C']] * motif_width,
-             'G': [pseudocounts['G']] * motif_width}
+    motif = {}
+    for base in "ATCG":
+        motif[base] = [pseudocounts[base]] * motif_width
 
-    # TODO: do we really need this total? calculate it in a nicer way then
-    pseudocounts_total = 0
-    for k in pseudocounts:
-        pseudocounts_total += pseudocounts[k]
+    pseudocounts_total = sum(pseudocounts.values())
 
     # For all bases and all positions of motif
     for i in "ATCG":
@@ -260,10 +314,6 @@ def calculate_motif(sequences, motif_width, pseudocounts):
 
             # Divide by the number of sequences and we have the weight of base
             # i at position j
-
-            # I think we shouldn't do this devision
-            # Perhaps only on output of the matrix to the screen
-            # (Have to check if this is ok for rest of algorithm)
             motif[i][j] /= float(len(sequences)) + pseudocounts_total
 
     return motif
@@ -272,85 +322,36 @@ def calculate_motif(sequences, motif_width, pseudocounts):
 def calculate_position(motif, motif_width, sequence):
 
     """
-    Calculate new position of motif in sequence.
+    Calculate new position of motif in sequence based on frequency matrix
+    motif with width motif_width.
     """
 
-    # TODO: refactor this function
-
+    # This will be the probability distribution of all positions
     probabilities = []
-    probability_total = 0
 
-    probability_sum = 0
-    probability_counts = []
-
-    smallest = 1
-
-    # for every word of length W in s
+    # For every word of length motif_width in sequence
     for r in range(len(sequence['sequence']) - motif_width + 1):
 
-        Qr = Pr = 1
+        # p_motif: probability that word is generated from motif
+        # p_background: probability that word is generated from background
+        p_motif = p_background = 1
 
-        # for every position of the motif
+        # For every position of the motif
         for x in range(motif_width):
 
-            # multiply by position weight of current base in sequence as
+            # Multiply by position weight of current base in sequence as
             # defined in the motif matrix
-            Qr *= motif[ sequence['sequence'][r+x] ][x]
+            p_motif *= motif[ sequence['sequence'][r+x] ][x]
 
-            # multiply by background value of current base in sequence
-            Pr *= 0.25 # TODO: use background_value[ s[r+x] ]
+            # Multiply by background value of current base in sequence
+            # TODO: use background_value[ s[r+x] ]
+            p_background *= 0.25
 
-        # corrected Qr value
-        # devide by zero?
-        p = Qr / Pr
-        probabilities.append(p)
-        probability_total += p
+        # Corrected probability for background probability
+        probabilities.append(p_motif / p_background)
 
-    for probability in probabilities:
-        Cr = probability / probability_total
-        probability_counts.append(probability_sum + Cr)
-        probability_sum += Cr
-        if Cr < smallest:
-            smallest = Cr
-
-        # TODO: slides say Cr should be divided by sum_r(Qr/Pr), I don't think
-        # we should do that
-        # Update: we do so now
-
-        #probability_counts.append(probability_sum + Cr)
-        #probability_sum += Cr
-
-    # We summed up all probabilities and generate a random integer between
-    # one and this sum. Now we traverse through the list of probabilities
-    # to see what probability this integer falls into.
-    # TODO: Yes, we take a random integer. Is this a bug or not?
-
-    choice = random()
-
-    position = -1
-    for p in range(len(probability_counts)):
-        if probability_counts[p] >= choice:
-            position = p
-            break
-
-    # TODO: remove this
-    if position < 0:
-        print "This should never happen"
-        sys.exit()
-
-    sequence['motif_position'] = position
-
-    #print "New position:", position
-
-    #if (probability_counts[position] - probability_counts[position-1] < 0.5):
-    #print "Choice was:", choice
-    #print "Probability was:", probability_counts[position] - probability_counts[position-1]
-    #print "Out of avarage:", (probability_sum / (len(sequence['sequence']) - motif_width))
-    #print "And total:", probability_sum
-    #print "Sequence length:", len(sequence['sequence'])
-    #print probability_counts
-
-    return position
+    # Choose a random position based on probability distribution
+    sequence['motif_position'] = choose_random(probabilities)
 
 
 def calculate_entropy(motif, motif_width, pseudocounts):
@@ -363,9 +364,7 @@ def calculate_entropy(motif, motif_width, pseudocounts):
     entropy = 0
 
     for base in "ATCG":
-
         for i in range(motif_width):
-
             entropy -= motif[base][i] * log(motif[base][i], 2)
 
             # I think there'se no need to use the background pseudocounts here,
@@ -373,6 +372,43 @@ def calculate_entropy(motif, motif_width, pseudocounts):
             #entropy += motif[base][i] * log(motif[base][i] / pseudocounts[base], 2)
 
     return entropy
+
+
+def calculate_score(motif, motif_width):
+
+    score = 0
+
+    for i in range(motif_width):
+        mx = 0
+        for base in "ATCG":
+            if motif[base][i] > mx: mx = motif[base][i]
+        score += mx
+
+    return 20 - score
+
+
+def choose_random(distribution):
+
+    """
+    Choose a random integer N with 0 <= N < len(distribution) according to
+    distribution of values in distribution.
+    """
+
+    # Normalize distribution
+    total = sum(distribution)
+    distribution = map(lambda n: float(n) / total, distribution)
+
+    # Generate random float between 0 and 1
+    position = random()
+
+    current = 0
+    for p in range(len(distribution)):
+        if distribution[p] + current >= position:
+            return p
+        current += distribution[p]
+
+    print "Error in choose_random."
+    sys.exit(1)
 
 
 def initialize():
@@ -453,8 +489,22 @@ def print_sequences(sequences, motif_width):
 
 def print_entropies(entropies):
 
-    r.xfig("entropies.fig")
+    from rpy import r   # TODO: make this import optional
+
+    r.postscript("entropies.ps")
     r.plot(entropies, type='b', xlab="Iterations", ylab="Entropy")
+    r.dev_off()
+
+
+def print_scores(scores):
+
+    # This metric seems to be a little bit less useful than entropy, but it is
+    # twice as fast.
+
+    from rpy import r
+
+    r.postscript("scores.ps")
+    r.plot(scores, type='b', xlab="Iterations", ylab="Score")
     r.dev_off()
 
 
