@@ -156,9 +156,10 @@ PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
 
 
 import sys
+from gibbs import Gibbs, GibbsError
 from optparse import OptionParser
 from Bio import Fasta
-from gibbs import Gibbs, GibbsError
+from random import choice
 
 
 def main():
@@ -230,15 +231,18 @@ def initialize():
     (options, args) = parser.parse_args()
 
     if options.cow:
+        s = ""
+        for _ in range(10):
+            s += choice("ATCG")
         # Created with the cowsay program
         print """ ____________
-< ATTCTGTACT >
+< %s >
  ------------
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\\
                 ||----w |
-                ||     ||"""
+                ||     ||""" % s
         sys.exit(0)
 
     if not options.input:
