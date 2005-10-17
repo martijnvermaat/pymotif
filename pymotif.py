@@ -149,6 +149,9 @@ Martijn Vermaat mvermaat@cs.vu.nl
 VERSION = "0.1"
 DATE = "2005/10/12"
 
+ITERATIONS_DEFAULT = 50
+RUNS_DEFAULT = 1
+PHASE_SHIFTS_DEFAULT = 0
 PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
 
 
@@ -165,26 +168,30 @@ def main():
     Main program.
     """
 
-    sequences, motif_width, pseudocounts_weight = initialize()
+    data = initialize()
 
-    g = Gibbs(sequences, motif_width, pseudocounts_weight)
+    g = Gibbs(data['sequences'], data['width'], data['weight'])
 
-    g.find_motif(runs=5, iterations=80, phase_shifts=4)
+    g.find_motif(data['runs'], data['iterations'], data['shifts'])
 
-    print_sequences(sequences, motif_width)
+    print_sequences(data['sequences'], data['width'])
 
 
 def initialize():
 
     """
-    Parse command line options, and read input Fasta file.
+    Parses command line options, and reads input Fasta file.
 
-    The returned tuple contains three fields:
+    The returned dictionary contains the following fields:
 
-        sequences  a list of dictionary objects having 'title', 'sequence',
-                   and 'motif_position' attributes
-        width      width of motif to find
-        weight     weight to use for pseudocounts
+        sequences   a list of dictionary objects having 'title', 'sequence',
+                    and 'motif_position' attributes
+        width       width of motif to find
+        weight      weight to use for pseudocounts
+        runs        number of times to run the algorithm
+        iterations  number of non-improving iterations per run before
+                    stopping
+        shifts      maximum phase shifts to detect
     """
 
     # TODO: change description
@@ -197,12 +204,25 @@ def initialize():
                       help="read FILE in Fasta format")
     parser.add_option("-w", "--width", dest="width", metavar="WIDTH",
                       type="int", help="find motif of width WIDTH")
+    parser.add_option("-r", "--runs", dest="runs", metavar="RUNS",
+                      default=RUNS_DEFAULT, type="int",
+                      help="run the algorithm RUNS times (" +
+                      str(RUNS_DEFAULT) + ")")
+    parser.add_option("-t", "--iterations", dest="iterations",
+                      metavar="ITERATIONS", default=ITERATIONS_DEFAULT,
+                      type="int", help="per run ITERATIONS non-improving "
+                      "iterations (" + str(ITERATIONS_DEFAULT) + ")")
     parser.add_option("-p", "--pseudo", dest="pseudo", metavar="WEIGHT",
                       default=PSEUDOCOUNTS_DEFAULT_WEIGHT, type="float",
-                      help="use WEIGHT for weight of pseudocounts (defaults to " +
+                      help="use WEIGHT for weight of pseudocounts (" +
                       str(PSEUDOCOUNTS_DEFAULT_WEIGHT) + ")")
+    parser.add_option("-s", "--phase-shifts", dest="shifts", metavar="SHIFTS",
+                      default=PHASE_SHIFTS_DEFAULT, type="int",
+                      help="detect phase shifts of width SHIFTS (" +
+                      str(PHASE_SHIFTS_DEFAULT) + ")")
     parser.add_option("-f", "--format", action="store_true", dest="format",
-                      default=False, help="format teacher's harddrive (not recommended)")
+                      default=False, help="format teacher's harddrive (not "
+                      "recommended)")
 
     (options, args) = parser.parse_args()
 
@@ -229,7 +249,12 @@ def initialize():
                   'motif_position': 0}
                  for record in fasta_iterator]
 
-    return sequences, options.width, options.pseudo
+    return {'sequences':  sequences,
+            'width':      options.width,
+            'weight':     options.pseudo,
+            'runs':       options.runs,
+            'iterations': options.iterations,
+            'shifts':     options.shifts}
 
 
 def print_motif(motif):

@@ -27,11 +27,11 @@ class Gibbs:
     __pseudocounts = {}
 
 
-    def __init__(self, sequences, motif_width, pseudocounts_weight):
+    def __init__(self, sequences, motif_width, pseudocounts_weight=0.1):
 
         """
         Gibbs takes a list of sequence objects, the width of the motif to find
-        and the weight to use for pseudocounts.
+        and the weight to use for pseudocounts (default 0.1).
 
         The sequence object are dictionaries with keys:
 
@@ -55,15 +55,15 @@ class Gibbs:
 
         Parameters:
 
-            runs          times to run algorithm
-            iterations    non-improving iterations before quiting
-            phase_shifts  number of phase shifts to examine
+            runs          times to run algorithm (1)
+            iterations    non-improving iterations before quiting (50)
+            phase_shifts  number of phase shifts to examine (0)
 
         Stores the best alignment found.
         """
 
         overall_best_entropy = 9999
-        overall_best_alignment = []
+        overall_best_alignment = [0] * len(self.__sequences)
 
         for r in range(runs):
 
@@ -72,7 +72,7 @@ class Gibbs:
             self.__random_motif_positions()
 
             best_entropy = 9999
-            best_alignment = []
+            best_alignment = [0] * len(self.__sequences)
 
             i = 0
 
@@ -98,10 +98,10 @@ class Gibbs:
 
                 # Do a phase shift every 15 iterations
                 # TODO: provide command line option
-                if i > 0 and i % 15 == 0:
+                if i > 0 and i % 19 == 0:
                     shift = self.__phase_shift(phase_shifts)
                     #if shift != 0:
-                        #print "Shift:", i, shift
+                    #print "Shift:", shift
 
                 entropy = self.__calculate_entropy(motif)
                 if entropy < best_entropy:
@@ -162,33 +162,36 @@ class Gibbs:
         for s in self.__sequences:
             s['motif_position'] -= shift
 
-        # Keep best shift information
-        best_shift = 0
-        best_entropy = old_entropy
+        # Keep entropy for all shifts
+        entropies = []
 
         # For all shifts in range (-shift, shift)
         for i in range(shift * 2 + 1):
 
             # We already calculated the no shift case
-            if i != 2:
+            if i == shift:
+                entropies.append(old_entropy)
 
+            else:
                 motif = self.__calculate_motif(self.__sequences)
                 entropy = self.__calculate_entropy(motif)
-
-                if entropy < best_entropy:
-                    best_shift = i - 2
-                    best_entropy = entropy
+                entropies.append(entropy)
 
             # Shift sequences
             for s in self.__sequences:
                 s['motif_position'] += 1
 
-        # Restore to best shift
-        # TODO: pick random shift based on distribution
-        for s in self.__sequences:
-            s['motif_position'] -= (shift - best_shift + 1)
+        # Make distribution based on entropies
+        highest = max(entropies)
+        distribution = map(lambda e: highest - e, entropies)
 
-        return best_shift
+        best = self.__choose_random(distribution)
+
+        # Restore to best shift
+        for s in self.__sequences:
+            s['motif_position'] -= (2 * shift) - best + 1
+
+        return best - shift
 
 
     def __calculate_pseudocounts(self, weight):
@@ -197,9 +200,13 @@ class Gibbs:
         Calculate for each base a weighted pseudocount.
         """
 
-        # TODO: use the background frequency for this
+        # Total number of bases in sequences
+        total = float(sum([len(s['sequence']) for s in self.__sequences]))
+
         for base in "ATCG":
-            self.__pseudocounts[base] = weight * 0.25
+            # Number of occurences of this base in sequences
+            n = sum([s['sequence'].count(base) for s in self.__sequences])
+            self.__pseudocounts[base] = weight * (n / total)
 
         return
 
@@ -276,8 +283,8 @@ class Gibbs:
                 p_motif *= motif[ sequence['sequence'][r+x] ][x]
 
                 # Multiply by background value of current base in sequence
-                # TODO: use background_value[ s[r+x] ]
-                p_background *= 0.25
+                p_background *= self.__pseudocounts[
+                    sequence['sequence'][r+x]]
 
             # Corrected probability for background probability
             probabilities.append(p_motif / p_background)
