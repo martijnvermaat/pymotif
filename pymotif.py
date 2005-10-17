@@ -149,14 +149,13 @@ Martijn Vermaat mvermaat@cs.vu.nl
 VERSION = "0.1"
 DATE = "2005/10/12"
 
-ITERATIONS_DEFAULT = 50
-RUNS_DEFAULT = 1
+ITERATIONS_DEFAULT = 80
 PHASE_SHIFTS_DEFAULT = 0
+PS_FREQUENCY_DEFAULT = 15
 PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
 
 
 import sys
-from random import choice  # TODO: probably remove this import
 from optparse import OptionParser
 from Bio import Fasta
 from gibbs import Gibbs, GibbsError
@@ -170,9 +169,13 @@ def main():
 
     data = initialize()
 
-    g = Gibbs(data['sequences'], data['width'], data['weight'])
+    g = Gibbs(sequences=data['sequences'],
+              motif_width=data['width'],
+              pseudocounts_weight=data['weight'])
 
-    g.find_motif(data['runs'], data['iterations'], data['shifts'])
+    g.find_motif(iterations=data['iterations'],
+                 phase_shifts=data['shifts'],
+                 ps_frequency=data['ps_freq'])
 
     print_sequences(data['sequences'], data['width'])
 
@@ -188,14 +191,14 @@ def initialize():
                     and 'motif_position' attributes
         width       width of motif to find
         weight      weight to use for pseudocounts
-        runs        number of times to run the algorithm
-        iterations  number of non-improving iterations per run before
-                    stopping
+        iterations  number of non-improving iterations before stopping
         shifts      maximum phase shifts to detect
     """
 
-    # TODO: change description
-    parser = OptionParser(usage = "usage: %prog -i FILE -w WIDTH [options]",
+    # TODO: change description (story about best option settings depending on
+    # input genes)
+    parser = OptionParser(usage = "usage: %prog -i FILE -w WIDTH [-h] "
+                          "[options]",
                           version = "PyMotif %s (%s)" % (VERSION, DATE),
                           description = "PyMotif reads an input file in Fasta"
                           " format and prints the gene names.")
@@ -204,14 +207,10 @@ def initialize():
                       help="read FILE in Fasta format")
     parser.add_option("-w", "--width", dest="width", metavar="WIDTH",
                       type="int", help="find motif of width WIDTH")
-    parser.add_option("-r", "--runs", dest="runs", metavar="RUNS",
-                      default=RUNS_DEFAULT, type="int",
-                      help="run the algorithm RUNS times (" +
-                      str(RUNS_DEFAULT) + ")")
     parser.add_option("-t", "--iterations", dest="iterations",
                       metavar="ITERATIONS", default=ITERATIONS_DEFAULT,
-                      type="int", help="per run ITERATIONS non-improving "
-                      "iterations (" + str(ITERATIONS_DEFAULT) + ")")
+                      type="int", help="number of non-improving iterations ("
+                      + str(ITERATIONS_DEFAULT) + ")")
     parser.add_option("-p", "--pseudo", dest="pseudo", metavar="WEIGHT",
                       default=PSEUDOCOUNTS_DEFAULT_WEIGHT, type="float",
                       help="use WEIGHT for weight of pseudocounts (" +
@@ -220,11 +219,27 @@ def initialize():
                       default=PHASE_SHIFTS_DEFAULT, type="int",
                       help="detect phase shifts of width SHIFTS (" +
                       str(PHASE_SHIFTS_DEFAULT) + ")")
-    parser.add_option("-f", "--format", action="store_true", dest="format",
-                      default=False, help="format teacher's harddrive (not "
-                      "recommended)")
+    parser.add_option("-f", "--ps-frequency", dest="frequency",
+                      metavar="FREQ", default=PS_FREQUENCY_DEFAULT,
+                      type="int", help="if SHIFTS>0, detect phase shifts "
+                      "every FREQ iterations (" + str(PS_FREQUENCY_DEFAULT) +
+                      ")")
+    parser.add_option("-c", "--cow", action="store_true", dest="cow",
+                      default=False, help="display cow (not recommended)")
 
     (options, args) = parser.parse_args()
+
+    if options.cow:
+        # Created with the cowsay program
+        print """ ____________
+< ATTCTGTACT >
+ ------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\\
+                ||----w |
+                ||     ||"""
+        sys.exit(0)
 
     if not options.input:
         parser.error("input file required")
@@ -252,9 +267,9 @@ def initialize():
     return {'sequences':  sequences,
             'width':      options.width,
             'weight':     options.pseudo,
-            'runs':       options.runs,
             'iterations': options.iterations,
-            'shifts':     options.shifts}
+            'shifts':     options.shifts,
+            'ps_freq':    options.frequency}
 
 
 def print_motif(motif):
@@ -272,15 +287,6 @@ def print_sequences(sequences, motif_width):
     for s in sequences:
         start, end = s['motif_position'], s['motif_position'] + motif_width
         print "%s... motif at position %s" % (s['sequence'][start:end], s['motif_position'])
-
-
-def print_entropies(entropies):
-
-    from rpy import r   # TODO: make this import optional
-
-    r.postscript("entropies.ps")
-    r.plot(entropies, type='b', xlab="Iterations", ylab="Entropy")
-    r.dev_off()
 
 
 if __name__ == "__main__":

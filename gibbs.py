@@ -2,9 +2,7 @@
 Set of functions implementing the Gibbs sampling algorithm to find local
 alignments of sequences.
 
-
-TODO: use __ in private names
-
+TODO: more text here
 
 Martijn Vermaat mvermaat@cs.vu.nl
 """
@@ -12,6 +10,10 @@ Martijn Vermaat mvermaat@cs.vu.nl
 
 import random
 import math
+
+
+PS_ITERATIONS_FACTOR = 4
+ONE_PLUS_ONE = 2
 
 
 class Gibbs:
@@ -48,88 +50,77 @@ class Gibbs:
         return
 
 
-    def find_motif(self, runs=1, iterations=50, phase_shifts=0):
+    def find_motif(self, iterations=50, phase_shifts=0, ps_frequency=12):
 
         """
         Finds a motif in sequences using Gibbs sampling.
 
         Parameters:
 
-            runs          times to run algorithm (1)
             iterations    non-improving iterations before quiting (50)
             phase_shifts  number of phase shifts to examine (0)
+            ps_frequency  frequency of iterations detecting phase shifts (12)
 
         Stores the best alignment found.
         """
 
-        overall_best_entropy = 9999
-        overall_best_alignment = [0] * len(self.__sequences)
+        self.__random_motif_positions()
 
-        for r in range(runs):
+        best_entropy = 9999
+        best_alignment = [0] * len(self.__sequences)
 
-            # TODO: maybe we could make some heuristics up for the next
-            # initialization instead of random positions every run
-            self.__random_motif_positions()
+        # TODO: this is only for graphing
+        entropies = []
 
-            best_entropy = 9999
-            best_alignment = [0] * len(self.__sequences)
+        i = j = 0
 
-            i = 0
+        while i < iterations:
 
-            while i < iterations:
+            i += 1
+            j += 1
 
-                i += 1
+            # Pick a random sequence
+            current_sequence = random.choice(self.__sequences)
+            sequences_minus_current = filter(
+                lambda s: s != current_sequence,
+                self.__sequences)
 
-                # Pick a random sequence
-                current_sequence = random.choice(self.__sequences)
-                sequences_minus_current = filter(
-                    lambda s: s != current_sequence,
-                    self.__sequences)
+            motif = self.__calculate_motif(sequences_minus_current)
 
-                motif = self.__calculate_motif(sequences_minus_current)
+            #print_motif(motif)
 
-                #print_motif(motif)
+            entropies.append(self.__calculate_entropy(motif))
 
-                #entropies.append(g.calculate_entropy(motif,
-                #                                     motif_width,
-                #                                     pseudocounts))
+            self.__calculate_position(motif, current_sequence)
 
-                self.__calculate_position(motif, current_sequence)
+            # Do a phase shift every ps_frequency iterations
+            if phase_shifts > 0 and j % ps_frequency == 0:
+                shift = self.__phase_shift(phase_shifts)
+                # Give the algorithm a chance of recovering from
+                # badly choosen phase shifts
+                # The correction for i should never be bigger than
+                # ps_frequency because it would loop forever
+                i -= ps_frequency / PS_ITERATIONS_FACTOR
 
-                # Do a phase shift every 15 iterations
-                # TODO: provide command line option
-                if i > 0 and i % 19 == 0:
-                    shift = self.__phase_shift(phase_shifts)
-                    #if shift != 0:
-                    #print "Shift:", shift
-
-                entropy = self.__calculate_entropy(motif)
-                if entropy < best_entropy:
-                    best_entropy = entropy
-                    best_alignment = [s['motif_position']
-                                      for s in self.__sequences]
-                    i = 0
-
-            # Restore to best entropy
-            for i in range(len(self.__sequences)):
-                self.__sequences[i]['motif_position'] = best_alignment[i]
-
-            motif = self.__calculate_motif(self.__sequences)
+            # Okay, this is based on N-1 sequences, but practice shows this
+            # is good enough to remember 'best' alignments
             entropy = self.__calculate_entropy(motif)
-
-            #print entropy
-
-            if entropy < overall_best_entropy:
-                overall_best_entropy = entropy
-                overall_best_alignment = [s['motif_position']
-                                          for s in self.__sequences]
+            if entropy < best_entropy:
+                best_entropy = entropy
+                best_alignment = [s['motif_position']
+                                  for s in self.__sequences]
+                i = 0
 
         # Restore to best entropy
         for i in range(len(self.__sequences)):
-            self.__sequences[i]['motif_position'] = overall_best_alignment[i]
+            self.__sequences[i]['motif_position'] = best_alignment[i]
 
         motif = self.__calculate_motif(self.__sequences)
-        print self.__calculate_entropy(motif)
+        entropy = self.__calculate_entropy(motif)
+
+        #self.__print_entropies(entropies)
+
+        print best_entropy
 
         return
 
@@ -337,6 +328,17 @@ class Gibbs:
 
         # Hmm we should have already left
         raise GibbsError("Error in biased random function (choose_random)")
+
+
+    def __print_entropies(self, entropies):
+
+        # TODO: remove this or make it a debug thing
+
+        from rpy import r
+
+        r.postscript("entropies.ps")
+        r.plot(entropies, type='b', xlab="Iterations", ylab="Entropy")
+        r.dev_off()
 
 
 class GibbsError(Exception):
