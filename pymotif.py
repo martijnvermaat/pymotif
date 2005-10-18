@@ -132,6 +132,13 @@ Random notes:
 * The real challenge is not to find a 'good' motif, but to find the best motif
   and to optimize it (convergence algorithm, phase shifting, etc)
 * Run the algorithm more than once and show the best result
+* In documentation show plots of what happens with phase shifts
+  (less stable, but more probable to find better neighbouring alignment)
+* heuristic for initial motif positions:
+  find random h-word in one sequence, now find the exact same h-word in all
+  others and align them
+  preferably the h-word should contain highly significant bases (compared to
+  background which we already calculated)
 
 Pointers:
 http://ibivu.cs.vu.nl/teaching/a4g/materials/lect3-handout.pdf
@@ -177,8 +184,6 @@ def main():
     g.find_motif(iterations=data['iterations'],
                  phase_shifts=data['shifts'],
                  ps_frequency=data['ps_freq'])
-
-    print_sequences(data['sequences'], data['width'])
 
 
 def initialize():
@@ -274,23 +279,6 @@ def initialize():
             'iterations': options.iterations,
             'shifts':     options.shifts,
             'ps_freq':    options.frequency}
-
-
-def print_motif(motif):
-    # Print position weight matrix for motif
-    for base in "ATCG":
-        print base,
-        # Do not uncomment this comment
-        for weight in motif[base]:
-            print "%1.2f" % weight,   # we have floats
-        print
-
-
-def print_sequences(sequences, motif_width):
-    # Print motif occurence in each sequence and motif position
-    for s in sequences:
-        start, end = s['motif_position'], s['motif_position'] + motif_width
-        print "%s... motif at position %s" % (s['sequence'][start:end], s['motif_position'])
 
 
 if __name__ == "__main__":

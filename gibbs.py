@@ -66,7 +66,7 @@ class Gibbs:
 
         self.__random_motif_positions()
 
-        best_entropy = 9999
+        best_entropy = 0
         best_alignment = [0] * len(self.__sequences)
 
         # TODO: this is only for graphing
@@ -105,7 +105,7 @@ class Gibbs:
             # Okay, this is based on N-1 sequences, but practice shows this
             # is good enough to remember 'best' alignments
             entropy = self.__calculate_entropy(motif)
-            if entropy < best_entropy:
+            if entropy > best_entropy:
                 best_entropy = entropy
                 best_alignment = [s['motif_position']
                                   for s in self.__sequences]
@@ -122,6 +122,10 @@ class Gibbs:
 
         print best_entropy
 
+        self.__print_motif(motif)
+
+        self.__print_sequences()
+
         return
 
 
@@ -132,35 +136,36 @@ class Gibbs:
         the fase shift with best entropy.
         """
 
+        shift_left = shift_right = shift
+
         # Check if we can really do these shifts
-        # TODO: make a difference between shift_left and shift_right
         for s in self.__sequences:
-            if s['motif_position'] < shift:
-                shift = s['motif_position']
+            if s['motif_position'] < shift_left:
+                shift_left = s['motif_position']
             right = len(s['sequence']) - (s['motif_position']
                                           + self.__motif_width)
-            if  right < shift:
-                shift = right
+            if  right < shift_right:
+                shift_right = right
 
-        if shift < 1:
+        if shift_left < 1 and shift_right < 1:
             return 0
 
         # Calculate entropy for no shift
         motif = self.__calculate_motif(self.__sequences)
         old_entropy = self.__calculate_entropy(motif)
 
-        # Start at position -shift
+        # Start at left-most position
         for s in self.__sequences:
-            s['motif_position'] -= shift
+            s['motif_position'] -= shift_left
 
         # Keep entropy for all shifts
         entropies = []
 
-        # For all shifts in range (-shift, shift)
-        for i in range(shift * 2 + 1):
+        # For all shifts
+        for i in range(shift_left + 1 + shift_right):
 
             # We already calculated the no shift case
-            if i == shift:
+            if i == shift_left:
                 entropies.append(old_entropy)
 
             else:
@@ -172,17 +177,20 @@ class Gibbs:
             for s in self.__sequences:
                 s['motif_position'] += 1
 
+
         # Make distribution based on entropies
-        highest = max(entropies)
-        distribution = map(lambda e: highest - e, entropies)
+        lowest = min(entropies)
+        distribution = map(lambda e: e - lowest, entropies)
 
         best = self.__choose_random(distribution)
 
         # Restore to best shift
         for s in self.__sequences:
-            s['motif_position'] -= (2 * shift) - best + 1
+            s['motif_position'] -= (shift_left + 1 + shift_right) - best
 
-        return best - shift
+        #print "ja: %i (%i, %i)" % (best - shift_left, shift_left, shift_right)
+
+        return best - shift_left
 
 
     def __calculate_pseudocounts(self, weight):
@@ -296,12 +304,13 @@ class Gibbs:
 
         for base in "ATCG":
             for i in range(self.__motif_width):
-                entropy -= motif[base][i] * math.log(motif[base][i], 2)
+                # TODO: look at this, second approach seems best after all
+                #entropy -= motif[base][i] * math.log(motif[base][i], 2)
 
                 # I think there'se no need to use the background pseudocounts
                 # here, because we already used them in the motif matrix.
-                #entropy += motif[base][i] * log(motif[base][i] /
-                #                                self.__pseudocounts[base], 2)
+                entropy += motif[base][i] * math.log(
+                    motif[base][i] / self.__pseudocounts[base], 2)
 
         return entropy
 
@@ -339,6 +348,29 @@ class Gibbs:
         r.postscript("entropies.ps")
         r.plot(entropies, type='b', xlab="Iterations", ylab="Entropy")
         r.dev_off()
+
+        return
+
+
+    def __print_motif(self, motif):
+
+        # Print position weight matrix for motif
+        for base in "ATCG":
+            print base,
+            # Do not uncomment this comment
+            for weight in motif[base]:
+                print "%1.2f" % weight,   # we have floats
+            print
+
+        return
+
+
+    def __print_sequences(self):
+
+        # Print motif occurence in each sequence and motif position
+        for s in self.__sequences:
+            start, end = s['motif_position'], s['motif_position'] + self.__motif_width
+            print "%s... motif at position %s" % (s['sequence'][start:end], s['motif_position'])
 
 
 class GibbsError(Exception):
