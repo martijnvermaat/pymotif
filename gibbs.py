@@ -136,6 +136,8 @@ class Gibbs:
         """
         Calculate motif for some small phase shifts in each sequence and apply
         the fase shift with best entropy.
+
+        TODO: tell story about phase shifts from paper here
         """
 
         shift_left = shift_right = shift
