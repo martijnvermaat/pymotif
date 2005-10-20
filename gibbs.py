@@ -64,7 +64,9 @@ class Gibbs:
         Stores the best alignment found.
         """
 
-        self.__random_motif_positions()
+        #self.__random_motif_positions()
+
+        self.__initial_motif_positions()
 
         best_entropy = 0
         best_alignment = [0] * len(self.__sequences)
@@ -224,6 +226,82 @@ class Gibbs:
         return
 
 
+    def __initial_motif_positions(self):
+
+        """
+        Populate the list of sequences with a random position of the motif for
+        each sequence based on the following heuristic.
+
+        The idea is that significant motifs are mostly the ones that contain
+        relatively a lot of bases with a low background frequency.
+        In order to guide the algorithm to regions in the sequences where more
+        of these bases occur, we do the following:
+
+            Pick the base with the lowest background frequency. Now, in each
+            sequence, find all words of length pattern_width with at least
+            number_of_occurences occurences of that base. Choose a random one
+            of these position and initialize the motif position of the
+            sequence by aligning it with the random choosen position.
+
+        Of course, significant motifs might not always contain a certain
+        number of occurences of the base with lowest background frequency, let
+        alone within a certain amount of bases apart from each other.
+        """
+
+        # TODO: command line options for these
+        pattern_width = 6
+        number_of_occurrences = 2
+
+        # Get base with lowest frequency
+        lowest_freq = self.__pseudocounts['A']
+        lowest_base = 'A'
+        for base in "ATCG":
+            if self.__pseudocounts[base] < lowest_freq:
+                lowest_freq = self.__pseudocounts[base]
+                lowest_base = base
+
+        for s in self.__sequences:
+
+            positions = []
+
+            occurrences = number_of_occurrences
+
+            while occurrences > 0:
+
+                # For every word of length pattern_width in sequence
+                for r in range(len(s['sequence']) - pattern_width + 1):
+
+                    # Count occurences of lowest_base in word
+                    n = s['sequence'][r : r+pattern_width].count(lowest_base)
+
+                    if n >= occurrences:
+                        positions.append(r)
+
+                if len(positions) > 0:
+                    break
+
+                # Try the same with one occurence of lowest_base less
+                occurrences -= 1
+
+            if len(positions) > 0:
+
+                position = random.choice(positions)
+                # TODO: center motif and word here, look out for end of
+                # sequence
+
+            else:
+
+                # This will not happen a lot, but choose a random position if
+                # the sequence doesn't have at least one occurence of
+                # lowest_base
+                position = random.randint(
+                    0, len(s['sequence']) - self.__motif_width)
+
+            s['motif_position'] = position
+
+        return
+
+
     def __calculate_motif(self, sequences):
 
         """
@@ -304,11 +382,6 @@ class Gibbs:
 
         for base in "ATCG":
             for i in range(self.__motif_width):
-                # TODO: look at this, second approach seems best after all
-                #entropy -= motif[base][i] * math.log(motif[base][i], 2)
-
-                # I think there'se no need to use the background pseudocounts
-                # here, because we already used them in the motif matrix.
                 entropy += motif[base][i] * math.log(
                     motif[base][i] / self.__pseudocounts[base], 2)
 

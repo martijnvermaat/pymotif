@@ -256,6 +256,9 @@ def initialize():
     if not options.width:
         parser.error("width argument required")
 
+    if options.width < 2:
+        parser.error("please use a sane motif width")
+
     # Read contents of Fasta file
     try:
         file = open(options.input)
@@ -272,6 +275,13 @@ def initialize():
                   'sequence':       record.sequence,
                   'motif_position': 0}
                  for record in fasta_iterator]
+
+    # We could do some more error checking on the input file here, like
+    # checking there's only ATCG and at least a few of them, but for now
+    # this is enough
+    if len(sequences) < 2:
+        parser.error("found %i sequences in input file %s" % (len(sequences),
+                                                              options.input))
 
     return {'sequences':  sequences,
             'width':      options.width,
