@@ -40,7 +40,7 @@ while True:
 
 # now we have 'good' M and b
 
-# print motif occurence in each sequence
+# print motif occurrence in each sequence
 for s in S:
     print s[ b[s]:(W-b[s]) ]
 
@@ -124,7 +124,7 @@ def calculate_position(W, M, s):
 
 
 Random notes:
-* Would it make sense to check for multiple occurences of the motif in one
+* Would it make sense to check for multiple occurrences of the motif in one
   sequence?
 * Look at pseudocounts
 * Look at gibbs sampling on page 412 of bioinformatics algorithms
@@ -159,7 +159,9 @@ DATE = "2005/10/12"
 ITERATIONS_DEFAULT = 80
 PHASE_SHIFTS_DEFAULT = 0
 PS_FREQUENCY_DEFAULT = 15
-PSEUDOCOUNTS_DEFAULT_WEIGHT = 0.1
+PSEUDOCOUNTS_WEIGHT_DEFAULT = 0.1
+INIT_NUM_OCCURRENCES_DEFAULT = 0
+INIT_PATTERN_WIDTH_DEFAULT = 0
 
 
 import sys
@@ -183,7 +185,13 @@ def main():
 
     g.find_motif(iterations=data['iterations'],
                  phase_shifts=data['shifts'],
-                 ps_frequency=data['ps_freq'])
+                 ps_frequency=data['ps_freq'],
+                 initial_num_occurrences=data['init_occurrences'],
+                 initial_pattern_width=data['init_width'])
+
+    print_sequences(data['sequences'], data['width'])
+
+    return
 
 
 def initialize():
@@ -218,9 +226,9 @@ def initialize():
                       type="int", help="number of non-improving iterations ("
                       + str(ITERATIONS_DEFAULT) + ")")
     parser.add_option("-p", "--pseudo", dest="pseudo", metavar="WEIGHT",
-                      default=PSEUDOCOUNTS_DEFAULT_WEIGHT, type="float",
+                      default=PSEUDOCOUNTS_WEIGHT_DEFAULT, type="float",
                       help="use WEIGHT for weight of pseudocounts (" +
-                      str(PSEUDOCOUNTS_DEFAULT_WEIGHT) + ")")
+                      str(PSEUDOCOUNTS_WEIGHT_DEFAULT) + ")")
     parser.add_option("-s", "--phase-shifts", dest="shifts", metavar="SHIFTS",
                       default=PHASE_SHIFTS_DEFAULT, type="int",
                       help="detect phase shifts of width SHIFTS (" +
@@ -230,6 +238,17 @@ def initialize():
                       type="int", help="if SHIFTS>0, detect phase shifts "
                       "every FREQ iterations (" + str(PS_FREQUENCY_DEFAULT) +
                       ")")
+    parser.add_option("-n", "--init-num-occurrences", dest="initoccurrences",
+                      metavar="OCCURRENCES",
+                      default=INIT_NUM_OCCURRENCES_DEFAULT, type="int",
+                      help="number of base occurrences to use for initial "
+                      "positions heuristic (" +
+                      str(INIT_NUM_OCCURRENCES_DEFAULT) + ")")
+    parser.add_option("-v", "--init-pattern-width", dest="initwidth",
+                      metavar="WIDTH", default=INIT_PATTERN_WIDTH_DEFAULT,
+                      type="int", help="if OCCURRENCES>0, width of pattern "
+                      "to use for initial positions heuristic (same as motif "
+                      "width by default)")
     parser.add_option("-c", "--cow", action="store_true", dest="cow",
                       default=False, help="display cow (not recommended)")
 
@@ -283,12 +302,33 @@ def initialize():
         parser.error("found %i sequences in input file %s" % (len(sequences),
                                                               options.input))
 
-    return {'sequences':  sequences,
-            'width':      options.width,
-            'weight':     options.pseudo,
-            'iterations': options.iterations,
-            'shifts':     options.shifts,
-            'ps_freq':    options.frequency}
+    return {'sequences':        sequences,
+            'width':            options.width,
+            'weight':           options.pseudo,
+            'iterations':       options.iterations,
+            'shifts':           options.shifts,
+            'ps_freq':          options.frequency,
+            'init_occurrences': options.initoccurrences,
+            'init_width':       options.initwidth}
+
+
+def print_sequences(sequences, motif_width):
+
+    """
+    Print for the occurrence of the motif in each sequence.
+    """
+
+    print "Motif occurrences in sequences follow"
+
+    for i in range(len(sequences)):
+        start, end = (sequences[i]['motif_position'],
+                      sequences[i]['motif_position'] + motif_width)
+        print "Sequence #%i  %s  (at position %i)" % (
+            i + 1,
+            sequences[i]['sequence'][start:end],
+            sequences[i]['motif_position'])
+
+    return
 
 
 if __name__ == "__main__":

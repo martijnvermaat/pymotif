@@ -15,6 +15,9 @@ import math
 PS_ITERATIONS_FACTOR = 4
 ONE_PLUS_ONE = 2
 
+DEBUG = False
+DEBUG_ENTROPIES_FILE = "entropies.ps"
+
 
 class Gibbs:
 
@@ -38,7 +41,7 @@ class Gibbs:
         The sequence object are dictionaries with keys:
 
             title           title of the sequence (e.g. gene name)
-            sequence        string with ATCG occurences in sequence
+            sequence        string with ATCG occurrences in sequence
             motif_position  integer position of the motif in sequence
         """
 
@@ -50,29 +53,43 @@ class Gibbs:
         return
 
 
-    def find_motif(self, iterations=50, phase_shifts=0, ps_frequency=12):
+    def find_motif(self, iterations=50, phase_shifts=0, ps_frequency=12,
+                   initial_num_occurrences=0, initial_pattern_width=0):
 
         """
         Finds a motif in sequences using Gibbs sampling.
 
         Parameters:
 
-            iterations    non-improving iterations before quiting (50)
-            phase_shifts  number of phase shifts to examine (0)
-            ps_frequency  frequency of iterations detecting phase shifts (12)
+            iterations               non-improving iterations before quiting
+                                     (50)
+            phase_shifts             number of phase shifts to examine (0)
+            ps_frequency             frequency of iterations detecting phase
+                                     shifts (12)
+            initial_num_occurrences  number of base occurrences in pattern for
+                                     heuristic of initial motif positions (0)
+            initial_pattern_width    width of pattern for heuristic of initial
+                                     motif positions (motif_width)
 
         Stores the best alignment found.
         """
 
-        #self.__random_motif_positions()
+        if initial_num_occurrences > 0:
 
-        self.__initial_motif_positions()
+            if initial_pattern_width == 0:
+                initial_pattern_width = self.__motif_width
+
+            self.__initial_motif_positions(initial_num_occurrences,
+                                           initial_pattern_width)
+
+        else:
+
+            self.__random_motif_positions()
 
         best_entropy = 0
         best_alignment = [0] * len(self.__sequences)
 
-        # TODO: this is only for graphing
-        entropies = []
+        if DEBUG: entropies = []
 
         i = j = 0
 
@@ -89,9 +106,8 @@ class Gibbs:
 
             motif = self.__calculate_motif(sequences_minus_current)
 
-            #print_motif(motif)
-
-            entropies.append(self.__calculate_entropy(motif))
+            if DEBUG:
+                entropies.append(self.__calculate_entropy(motif))
 
             self.__calculate_position(motif, current_sequence)
 
@@ -117,16 +133,12 @@ class Gibbs:
         for i in range(len(self.__sequences)):
             self.__sequences[i]['motif_position'] = best_alignment[i]
 
-        motif = self.__calculate_motif(self.__sequences)
-        entropy = self.__calculate_entropy(motif)
-
-        #self.__print_entropies(entropies)
-
-        print best_entropy
-
-        self.__print_motif(motif)
-
-        self.__print_sequences()
+        if DEBUG:
+            motif = self.__calculate_motif(self.__sequences)
+            entropy = self.__calculate_entropy(motif)
+            self.__print_entropies(entropies)
+            print "Entropy:", best_entropy
+            self.__print_motif(motif)
 
         return
 
@@ -207,7 +219,7 @@ class Gibbs:
         total = float(sum([len(s['sequence']) for s in self.__sequences]))
 
         for base in "ATCG":
-            # Number of occurences of this base in sequences
+            # Number of occurrences of this base in sequences
             n = sum([s['sequence'].count(base) for s in self.__sequences])
             self.__pseudocounts[base] = weight * (n / total)
 
@@ -228,7 +240,7 @@ class Gibbs:
         return
 
 
-    def __initial_motif_positions(self):
+    def __initial_motif_positions(self, number_of_occurrences, pattern_width):
 
         """
         Populate the list of sequences with a random position of the motif for
@@ -241,18 +253,14 @@ class Gibbs:
 
             Pick the base with the lowest background frequency. Now, in each
             sequence, find all words of length pattern_width with at least
-            number_of_occurences occurences of that base. Choose a random one
-            of these position and initialize the motif position of the
+            number_of_occurrences occurrences of that base. Choose a random
+            one of these position and initialize the motif position of the
             sequence by aligning it with the random choosen position.
 
         Of course, significant motifs might not always contain a certain
-        number of occurences of the base with lowest background frequency, let
-        alone within a certain amount of bases apart from each other.
+        number of occurrences of the base with lowest background frequency,
+        let alone within a certain amount of bases apart from each other.
         """
-
-        # TODO: command line options for these
-        pattern_width = 6
-        number_of_occurrences = 2
 
         # Get base with lowest frequency
         lowest_freq = self.__pseudocounts['A']
@@ -273,7 +281,7 @@ class Gibbs:
                 # For every word of length pattern_width in sequence
                 for r in range(len(s['sequence']) - pattern_width + 1):
 
-                    # Count occurences of lowest_base in word
+                    # Count occurrences of lowest_base in word
                     n = s['sequence'][r : r+pattern_width].count(lowest_base)
 
                     if n >= occurrences:
@@ -282,19 +290,23 @@ class Gibbs:
                 if len(positions) > 0:
                     break
 
-                # Try the same with one occurence of lowest_base less
+                # Try the same with one occurrence of lowest_base less
                 occurrences -= 1
 
             if len(positions) > 0:
 
                 position = random.choice(positions)
-                # TODO: center motif and word here, look out for end of
-                # sequence
+                position += pattern_width / 2
+                position -= self.__motif_width / 2
+                if position < 0:
+                    position = 0
+                if position > len(s['sequence']) - self.__motif_width:
+                    position = len(s['sequence']) - self.__motif_width
 
             else:
 
                 # This will not happen a lot, but choose a random position if
-                # the sequence doesn't have at least one occurence of
+                # the sequence doesn't have at least one occurrence of
                 # lowest_base
                 position = random.randint(
                     0, len(s['sequence']) - self.__motif_width)
@@ -416,11 +428,17 @@ class Gibbs:
 
     def __print_entropies(self, entropies):
 
-        # TODO: remove this or make it a debug thing
+        """
+        This is for debugging purposes.
+        """
 
-        from rpy import r
+        try:
+            from rpy import r
+        except:
+            print "Could not import rpy module"
+            return
 
-        r.postscript("entropies.ps")
+        r.postscript(DEBUG_ENTROPIES_FILE)
         r.plot(entropies, type='b', xlab="Iterations", ylab="Entropy")
         r.dev_off()
 
@@ -429,12 +447,15 @@ class Gibbs:
 
     def __print_motif(self, motif):
 
+        """
+        This is for debugging purposes.
+        """
+
         # Print position weight matrix for motif
         for base in "ATCG":
             print base,
-            # Do not uncomment this comment
             for weight in motif[base]:
-                print "%1.2f" % weight,   # we have floats
+                print "%1.2f" % weight,
             print
 
         return
@@ -442,10 +463,14 @@ class Gibbs:
 
     def __print_sequences(self):
 
-        # Print motif occurence in each sequence and motif position
+        """
+        This is for debugging purposes.
+        """
+
+        # Print motif occurrence in each sequence and motif position
         for s in self.__sequences:
             start, end = s['motif_position'], s['motif_position'] + self.__motif_width
-            print "%s... motif at position %s" % (s['sequence'][start:end], s['motif_position'])
+            print "%s motif at position %s" % (s['sequence'][start:end], s['motif_position'])
 
 
 class GibbsError(Exception):
