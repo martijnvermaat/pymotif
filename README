@@ -1,0 +1,26 @@
+PyMotif version 0.1, 2003/10/23
+
+Martijn Vermaat, mvermaat@cs.vu.nl
+
+
+Prerequisites
+=============
+
+You need Python (tested with 2.4, but I see no reason why 2.3 wouldn't work)
+with the BioPython library (tested with 1.30) installed.
+
+If you use Debian, run 'apt-get install python-biopython' to install the
+BioPython library.
+
+If you use Ubuntu, run the same after adding the 'universe' repository to your
+sources.list file.
+
+BioPython can be found at: http://www.biopython.org/
+
+
+Running PyMotif
+===============
+
+
+Run PyMotif with the -h option for a complete overview of all command line
+options accepted by PyMotif.

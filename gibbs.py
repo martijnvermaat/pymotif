@@ -1,10 +1,13 @@
 """
-Set of functions implementing the Gibbs sampling algorithm to find local
-alignments of sequences.
+This module contains an implementation of the Gibbs sampling algorithm used
+for finding single local alignments of DNA sequences.
 
-TODO: more text here
+Classes:
 
-Martijn Vermaat mvermaat@cs.vu.nl
+    Gibbs       Implementation of Gibbs sampling
+    GibbsError  Class of errors raised by the Gibbs sampling algorithm
+
+Martijn Vermaat, mvermaat@cs.vu.nl
 """
 
 
@@ -23,7 +26,11 @@ class Gibbs:
 
 
     """
-    This class implements the Gibbs sampling algorithm.
+    An implementation of the Gibbs sampling algorithm.
+
+    Methods:
+
+        find_motif  start algorithm on provided DNA sequences
     """
 
 
@@ -35,10 +42,16 @@ class Gibbs:
     def __init__(self, sequences, motif_width, pseudocounts_weight=0.1):
 
         """
-        Gibbs takes a list of sequence objects, the width of the motif to find
-        and the weight to use for pseudocounts (default 0.1).
+        Create a new Gibbs instance with provided sequences and motif width.
+        Call find_motif after this to run the Gibbs sampling algorithm.
 
-        The sequence object are dictionaries with keys:
+        Parameters:
+
+            sequences            list of sequence objects (described below)
+            motif_width          width of the motif to find
+            pseudocounts_weight  weight to use for pseudocounts (default 0.1)
+
+        A sequence object is a dictionary with the following keys:
 
             title           title of the sequence (e.g. gene name)
             sequence        string with ATCG occurrences in sequence
@@ -57,21 +70,24 @@ class Gibbs:
                    initial_num_occurrences=0, initial_pattern_width=0):
 
         """
-        Finds a motif in sequences using Gibbs sampling.
+        Find a motif in sequences using Gibbs sampling.
 
         Parameters:
 
             iterations               non-improving iterations before quiting
-                                     (50)
-            phase_shifts             number of phase shifts to examine (0)
+                                     (default 50)
+            phase_shifts             number of phase shifts to examine
+                                     (default 0)
             ps_frequency             frequency of iterations detecting phase
-                                     shifts (12)
+                                     shifts (default 12)
             initial_num_occurrences  number of base occurrences in pattern for
-                                     heuristic of initial motif positions (0)
+                                     heuristic of initial motif positions
+                                     (default 0)
             initial_pattern_width    width of pattern for heuristic of initial
-                                     motif positions (motif_width)
+                                     motif positions (default value of
+                                     motif_width)
 
-        Stores the best alignment found.
+        Store the best alignment found in the sequence objects.
         """
 
         if initial_num_occurrences > 0:
@@ -149,7 +165,13 @@ class Gibbs:
         Calculate motif for some small phase shifts in each sequence and apply
         the fase shift with best entropy.
 
-        TODO: tell story about phase shifts from paper here
+        See the PyMotif documentation for more information.
+
+        Parameters:
+
+            shift  maximum width of shifts to consider
+
+        Return the width of the phase shift applied.
         """
 
         shift_left = shift_right = shift
@@ -212,7 +234,12 @@ class Gibbs:
     def __calculate_pseudocounts(self, weight):
 
         """
-        Calculate for each base a weighted pseudocount.
+        Calculate for each base a weighted pseudocount. Store results in
+        __pseudocounts dictionary.
+
+        Parameters:
+
+            weight  weight to use for pseudocounts
         """
 
         # Total number of bases in sequences
@@ -245,6 +272,12 @@ class Gibbs:
         """
         Populate the list of sequences with a random position of the motif for
         each sequence based on the following heuristic.
+
+        Parameters:
+
+            number_of_occurrences  number of occurrences of base to look for
+                                   in patterns
+            pattern_width          width of patterns to look for
 
         The idea is that significant motifs are mostly the ones that contain
         relatively a lot of bases with a low background frequency.
@@ -322,8 +355,12 @@ class Gibbs:
         Calculate the position weight matrix of the motif for the given
         sequences and their alignments.
 
-        The resulting matrix is a dictionary with for each key in ATCG a list
-        of length motif_width with position weights.
+        Parameters:
+
+            sequences  list of sequence objects to calculate motif for
+
+        Return the matrix as a dictionary with for each key in ATCG a list of
+        length motif_width with position weights.
         """
 
         # Populate the matrix with pseudocounts for all positions
@@ -354,6 +391,11 @@ class Gibbs:
 
         """
         Calculate new position of motif in sequence based on motif matrix.
+
+        Parameters:
+
+            motif     motif to use for calculating new position
+            sequence  sequence to align using motif
         """
 
         # This will be the probability distribution of all positions
@@ -390,6 +432,12 @@ class Gibbs:
 
         """
         Calculate the relative entropy of the given motif matrix.
+
+        Parameters:
+
+            motif  calculate relative entropy for this motif
+
+        Return the calculated entropy.
         """
 
         entropy = 0
@@ -407,6 +455,12 @@ class Gibbs:
         """
         Choose a random integer N with 0 <= N < len(distribution) according to
         distribution of values in distribution.
+
+        Parameters:
+
+            distribution  list of values to use as a distribution
+
+        Return randomly chosen integer.
         """
 
         # Normalize distribution
