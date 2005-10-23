@@ -1,6 +1,9 @@
-PyMotif version 0.1, 2003/10/23
+PyMotif version 0.1, 2005/10/23
 
 Martijn Vermaat, mvermaat@cs.vu.nl
+
+PyMotif is an implementation of the Gibbs sampling algorithm for finding
+single local alignments of DNA sequences.
 
 
 Prerequisites
@@ -13,7 +16,7 @@ If you use Debian, run 'apt-get install python-biopython' to install the
 BioPython library.
 
 If you use Ubuntu, run the same after adding the 'universe' repository to your
-sources.list file.
+sources.list file and having done a 'apt-get update'.
 
 BioPython can be found at: http://www.biopython.org/
 
@@ -21,6 +24,38 @@ BioPython can be found at: http://www.biopython.org/
 Running PyMotif
 ===============
 
+PyMotif take two required command line arguments:
 
-Run PyMotif with the -h option for a complete overview of all command line
-options accepted by PyMotif.
+    -i FILE     input file in Fasta format
+    -w WIDTH    width of the motif to find
+
+Example usage:
+
+    martijn@priscilla:~/a4g/motifs/pymotif$ ./pymotif.py -i GAL.seq -w 5
+    Motif occurrences in sequences follow
+    Sequence # 1  AGATA  (at position 412)
+    Sequence # 2  ACATA  (at position 89)
+    Sequence # 3  ACATA  (at position 334)
+    Sequence # 4  AGATA  (at position 393)
+    Sequence # 5  ACATA  (at position 358)
+    Sequence # 6  ACATA  (at position 209)
+    Sequence # 7  ACATA  (at position 14)
+    Sequence # 8  ACATA  (at position 60)
+    martijn@priscilla:~/a4g/motifs/pymotif$
+
+PyMotif takes a number of optional command line arguments, run PyMotif with
+the -h option for a complete overview.
+
+By default, no phase shifts are detected by the algorithm. Add (e.g.) -s 2 for
+detecting phase shifts up to two nucleotides width.
+
+Also by default, the initial motif positions heuristic is not employed. Add
+(e.g.) -n 2 -v 6 to use 2 base occurrences in patterns of width 6 for the
+initial motif positions heuristic (see below for more information).
+
+
+Implementation details
+======================
+
+A report with more implementation details and a short comparison with the
+AlignACE program can be found in the documentation directory.

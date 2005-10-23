@@ -12,7 +12,7 @@ single local alignments of DNA sequences.
 See the accompanied README file for usage instructions (or run PyMotif with
 the -h option) and the documentation directory for implementation details.
 
-TODO: maybe open repository and add BSD license
+TODO: readall on repository and add BSD license (in november)
 """
 
 
@@ -21,7 +21,7 @@ DATE = "2005/10/23"
 
 ITERATIONS_DEFAULT = 80
 PHASE_SHIFTS_DEFAULT = 0
-PS_FREQUENCY_DEFAULT = 15
+PS_FREQUENCY_DEFAULT = 20
 PSEUDOCOUNTS_WEIGHT_DEFAULT = 0.1
 INIT_NUM_OCCURRENCES_DEFAULT = 0
 INIT_PATTERN_WIDTH_DEFAULT = 0
