@@ -1,0 +1,99 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[english]{babel}
+\usepackage{a4,fullpage}
+\usepackage{amsmath,amsfonts,amssymb}
+%\usepackage{palatino} % palatino newcent helvet bookman cmbright
+
+\renewcommand{\familydefault}{\sfdefault}
+
+\title{PyMotif\\
+\normalsize{An implementation of the Gibbs sampling algorithm}}
+\author{
+    Martijn Vermaat\\
+    mvermaat@cs.vu.nl
+}
+\date{October 23, 2005}
+
+
+\begin{document}
+
+\maketitle
+
+
+\section{Introduction}
+
+Gibbs sampling is a general method used in mathematics and physics for
+probabilistic inference. We apply Gibbs sampling to the problem of detecting
+subtle patterns in DNA sequence data. Patterns common to multiple sequences
+are called a motif and often reflect a biological importance of the pattern.
+
+Our instantiation of the problem is as follows: given a set of sequences $S$
+and a motif width $W$, find in each sequence $S_{i}$ a word of width $W$ so
+that the words together form a motif.
+
+
+\section{Implementation}
+
+The basic algorithm is explained in \cite{Lawrence93}. Our implementation runs
+the algorithm for a maximum of $t$ non-improving iterations. Improvement is
+measured using the relative entropy of the motif found, calculated as
+\begin{align*}
+\sum_{j=1}^{W} \quad \sum_{r \in \{A,T,G,C\}} \quad p_{r j} \, \log_{2}
+\frac{p_{r j}}{b_{r}} \, \text{,}
+\end{align*}
+where $p_{r j}$ is the frequency of nucleotide $r$ in position $j$ of the
+alignment and $b_{r}$ is the background frequency of $r$ \cite{Jones04}. The
+motif with the highest relative entropy found is shown.
+
+
+\subsection*{Phase Shifts}
+
+A disadvantage of basic Gibbs sampling is that it is susceptible to the
+``phase'' problem. Consider a strong pattern at positions 9, 4, 13, \ldots
+within the given sequences. If after a few iterations the algorithm happens to
+choose positions 11 and 6 in the first two sequences, it is likely to settle
+with position 15 for the third sequence (and so on). Because of the nature of
+the algorithm, it will get locked into this shifted form of the optimal
+pattern.
+
+As proposed in \cite{Lawrence93}, we added an extra step to the algorithm.
+Every $f$ iterations, the current motif is checked for phase shifts of a
+certain maximum width $s$. Based on the relative entropies calculated from
+these phase shifts, a random phase shift is choosen and the algorithm
+continues.
+
+
+\subsection*{Initial Positions Heuristic}
+
+Testing our implementation made clear another problem of the algorithm.
+Patterns likely to occur based on background frequencies of nucleotides are
+easy to find but often not significant for our purposes. Using background
+frequencies in the sampling step and entropy calculation takes care for this
+to some extend, but the randomly choosen initial positions for the motif
+introduce the problem again.
+
+Our solution is to choose the initial positions for the motif based on the
+following heuristic. Highly significant patterns would in general contain one
+or more occurrences of the nucleotide with the lowest background frequency.
+Our algorithm searches for words of width $v$ having at least $n$ occurences
+of this nucleotide and chooses initial positions based on one of these words.
+
+
+\section{Comparison with \texttt{AlignACE}}
+
+
+
+
+\begin{thebibliography}{99}
+
+\bibitem{Lawrence93}C. E. Lawrence, S.F. Altschul, M.S. Boguski, J.S. Liu,
+A.F. Neuwald, J.C. Wootton. \emph{Detecting subtle sequence signals: A Gibbs
+sampling strategy for multiple alignment}, Science, 262(5131):208-214, 1993.
+
+\bibitem{Jones04}Neil C. Jones, Pavel A. Pevzner. \emph{An Introduction To
+Bioinformatics Algorithms}, Bradford Books (MIT Press), 2004, ISBN 0262101068.
+
+\end{thebibliography}
+
+
+\end{document}
