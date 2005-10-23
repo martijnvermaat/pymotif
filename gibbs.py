@@ -115,7 +115,7 @@ class Gibbs:
             if phase_shifts > 0 and j % ps_frequency == 0:
                 shift = self.__phase_shift(phase_shifts)
                 # Give the algorithm a chance of recovering from
-                # badly choosen phase shifts
+                # badly chosen phase shifts
                 # The correction for i should never be bigger than
                 # ps_frequency because it would loop forever
                 i -= ps_frequency / PS_ITERATIONS_FACTOR
@@ -255,7 +255,7 @@ class Gibbs:
             sequence, find all words of length pattern_width with at least
             number_of_occurrences occurrences of that base. Choose a random
             one of these position and initialize the motif position of the
-            sequence by aligning it with the random choosen position.
+            sequence by aligning it with the random chosen position.
 
         Of course, significant motifs might not always contain a certain
         number of occurrences of the base with lowest background frequency,
@@ -457,6 +457,15 @@ class Gibbs:
             for weight in motif[base]:
                 print "%1.2f" % weight,
             print
+
+        # Print significant motif positions
+        print '',
+        for i in range(self.__motif_width):
+            if max([motif[base][i] for base in "ATCG"]) > .6:
+                print "   *",
+            else:
+                print "    ",
+        print
 
         return
 

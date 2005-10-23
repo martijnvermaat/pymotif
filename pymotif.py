@@ -154,7 +154,7 @@ Martijn Vermaat mvermaat@cs.vu.nl
 
 
 VERSION = "0.1"
-DATE = "2005/10/12"
+DATE = "2005/10/23"
 
 ITERATIONS_DEFAULT = 80
 PHASE_SHIFTS_DEFAULT = 0
@@ -323,10 +323,10 @@ def print_sequences(sequences, motif_width):
     for i in range(len(sequences)):
         start, end = (sequences[i]['motif_position'],
                       sequences[i]['motif_position'] + motif_width)
-        print "Sequence #%i  %s  (at position %i)" % (
+        print "Sequence #%2i  %s  (at position %i)" % (
             i + 1,
             sequences[i]['sequence'][start:end],
-            sequences[i]['motif_position'])
+            sequences[i]['motif_position'] + 1)
 
     return
 

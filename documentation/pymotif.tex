@@ -59,7 +59,7 @@ pattern.
 As proposed in \cite{Lawrence93}, we added an extra step to the algorithm.
 Every $f$ iterations, the current motif is checked for phase shifts of a
 certain maximum width $s$. Based on the relative entropies calculated from
-these phase shifts, a random phase shift is choosen and the algorithm
+these phase shifts, a random phase shift is chosen and the algorithm
 continues.
 
 
@@ -69,7 +69,7 @@ Testing our implementation made clear another problem of the algorithm.
 Patterns likely to occur based on background frequencies of nucleotides are
 easy to find but often not significant for our purposes. Using background
 frequencies in the sampling step and entropy calculation takes care for this
-to some extend, but the randomly choosen initial positions for the motif
+to some extend, but the randomly chosen initial positions for the motif
 introduce the problem again.
 
 Our solution is to choose the initial positions for the motif based on the
@@ -79,9 +79,55 @@ Our algorithm searches for words of width $v$ having at least $n$ occurences
 of this nucleotide and chooses initial positions based on one of these words.
 
 
-\section{Comparison with \texttt{AlignACE}}
+\section{Comparison with \texttt{AlignACE} Results}
+
+We compared the results of our implementation with those of the
+\texttt{AlignACE} program \cite{AlignACE} (version 4.0 dated 05/13/04).
 
 
+\subsection*{Implementation Details}
+
+The approach taken by the \texttt{AlignACE} program differs in a number of
+ways from ours. First, it employs a multiple local alignment search, meaning
+that the motif may occur zero or more times in each sequence either on the
+forward or reverse strand. Our implementation only yields motifs occurring
+exactly once in each sequence's forward strand.
+
+Second, running the \texttt{AlignACE} program results in a series of motifs
+found, ordered by descending MAP score, the metric for motif strength used by
+\texttt{AlignACE}. Our implementation results in exactly one motif.
+
+Finally, our implementation needs a fixed parameter $W$ for the motif width,
+whereas the \texttt{AlignACE} program independently searches for motifs of
+different widths.
+
+
+\subsection*{Results}
+
+Running our implementation on 33 upstream  regions of yeast genes with a motif
+width of 10 and default settings (no phase shifts or heuristics) typically
+yields a result in only 5 to 7 seconds on our workstation. The motif found
+usually contains 6 or 7 strongly preserved nucleotide positions (out of 10).
+
+Varying input parameters can lead to a typical number of 7 to 8 highly
+preserverd nucleotide positions, but can also easily make the running time
+more than twice as long. Overall, we are not entirely satisfied with the
+effects of these variations on the algorithm. The process of finding the best
+parameter values tends to be cumbersome while result improvements are minimal
+at best.
+
+\paragraph{}
+
+The execution of \texttt{AlignACE} on the same set of sequences takes about
+30 to 40 seconds and typically yields 12 to 20 motifs of differing strength.
+Best motifs are usually very strong, whereas some tend to be rather weak.
+
+Comparing with the results of our implementation, the strongest motifs found
+by \texttt{AlignACE} seem to be unobtainable using single local alignment. Due
+to this difference in implementation it is hard to meaningly compare results.
+It is clear however, that our implementation usually finds motifs which are
+more significant than the motifs found by \texttt{AlignACE} with the lowest
+reported MAP score.
 
 
 \begin{thebibliography}{99}
@@ -92,6 +138,9 @@ sampling strategy for multiple alignment}, Science, 262(5131):208-214, 1993.
 
 \bibitem{Jones04}Neil C. Jones, Pavel A. Pevzner. \emph{An Introduction To
 Bioinformatics Algorithms}, Bradford Books (MIT Press), 2004, ISBN 0262101068.
+
+\bibitem{AlignACE}Jason D. Hughes et al. \texttt{AlignACE}.
+World Wide Web: \texttt{http://atlas.med.harvard.edu/}.
 
 \end{thebibliography}
 
