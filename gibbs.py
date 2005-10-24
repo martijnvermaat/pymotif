@@ -226,8 +226,6 @@ class Gibbs:
         for s in self.__sequences:
             s['motif_position'] -= (shift_left + 1 + shift_right) - best
 
-        #print "ja: %i (%i, %i)" % (best - shift_left, shift_left, shift_right)
-
         return best - shift_left
 
 
