@@ -24,7 +24,7 @@ BioPython can be found at: http://www.biopython.org/
 Running PyMotif
 ===============
 
-PyMotif take two required command line arguments:
+PyMotif takes two required command line arguments:
 
     -i FILE     input file in Fasta format
     -w WIDTH    width of the motif to find
