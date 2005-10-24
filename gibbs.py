@@ -1,6 +1,6 @@
 """
 This module contains an implementation of the Gibbs sampling algorithm used
-for finding single local alignments of DNA sequences.
+for finding local alignments of DNA sequences.
 
 Classes:
 

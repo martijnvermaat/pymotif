@@ -88,10 +88,10 @@ We compared the results of our implementation with those of the
 \subsection*{Implementation Details}
 
 The approach taken by the \texttt{AlignACE} program differs in a number of
-ways from ours. First, it employs a multiple local alignment search, meaning
-that the motif may occur zero or more times in each sequence either on the
-forward or reverse strand. Our implementation only yields motifs occurring
-exactly once in each sequence's forward strand.
+ways from ours. First, it employs a multiple local alignment search where
+the motif may occur zero or more times in each sequence either on the forward
+or reverse strand. Our implementation only yields motifs occurring exactly
+once in each sequence's forward strand.
 
 Second, running the \texttt{AlignACE} program results in a series of motifs
 found, ordered by descending MAP score, the metric for motif strength used by
@@ -123,11 +123,11 @@ The execution of \texttt{AlignACE} on the same set of sequences takes about
 Best motifs are usually very strong, whereas some tend to be rather weak.
 
 Comparing with the results of our implementation, the strongest motifs found
-by \texttt{AlignACE} seem to be unobtainable using single local alignment. Due
-to this difference in implementation it is hard to meaningly compare results.
-It is clear however, that our implementation usually finds motifs which are
-more significant than the motifs found by \texttt{AlignACE} with the lowest
-reported MAP score.
+by \texttt{AlignACE} seem to be unobtainable using each sequence exactly once.
+Due to this difference in implementation it is hard to meaningly compare
+results. It is clear however, that our implementation usually finds motifs
+which are more significant than the motifs found by \texttt{AlignACE} with the
+lowest reported MAP score.
 
 
 \begin{thebibliography}{99}
