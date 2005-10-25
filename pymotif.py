@@ -5,19 +5,24 @@
 PyMotif
 
 Martijn Vermaat, mvermaat@cs.vu.nl
+http://www.cs.vu.nl/~mvermaat/pymotif
 
 PyMotif is an implementation of the Gibbs sampling algorithm for finding
 local alignments of DNA sequences.
 
-See the accompanied README file for usage instructions (or run PyMotif with
-the -h option) and the documentation directory for implementation details.
+Consult the accompanied README file for usage instructions (or run PyMotif
+with the -h option) and the documentation directory for implementation
+details.
 
-TODO: readall on repository and add BSD license (in november)
+See the file LICENSE for copyright information and the terms and conditions
+for copying, distribution and modification of PyMotif.
+
+TODO: readall on repository (in november)
 """
 
 
-VERSION = "0.1"
-DATE = "2005/10/23"
+VERSION = "0.1.1"
+DATE = "2005/10/25"
 
 ITERATIONS_DEFAULT = 80
 PHASE_SHIFTS_DEFAULT = 0
