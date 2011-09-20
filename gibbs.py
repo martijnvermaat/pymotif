@@ -7,7 +7,7 @@ Classes:
     Gibbs       Implementation of Gibbs sampling
     GibbsError  Class of errors raised by the Gibbs sampling algorithm
 
-Martijn Vermaat, mvermaat@cs.vu.nl
+Martijn Vermaat <martijn@vermaat.name>
 
 See the file LICENSE for copyright information and the terms and conditions
 for copying, distribution and modification of PyMotif.
